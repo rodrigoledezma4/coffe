@@ -30,6 +30,13 @@ export function RegisterModal({ visible, onClose, onNavigateToLogin }: RegisterM
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
+  // Reset form when modal closes
+  React.useEffect(() => {
+    if (!visible) {
+      resetForm();
+    }
+  }, [visible]);
+
   const handleRegister = async () => {
     // Add console log to verify function is being called
     console.log('🔄 Starting registration process...');
@@ -150,7 +157,12 @@ export function RegisterModal({ visible, onClose, onNavigateToLogin }: RegisterM
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal 
+      visible={visible} 
+      animationType="slide" 
+      transparent
+      onRequestClose={handleClose}
+    >
       <View style={styles.modalOverlay}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -277,13 +289,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   keyboardView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     width: '100%',
+    maxHeight: '90%',
+    justifyContent: 'center',
     paddingHorizontal: 20,
   },
   modalContent: {
@@ -292,7 +302,6 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    maxHeight: '90%',
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: {
@@ -314,7 +323,7 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   formContainer: {
-    flex: 1,
+    maxHeight: 400,
   },
   inputContainer: {
     marginBottom: 16,
@@ -333,7 +342,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     backgroundColor: '#f8f8f8',
-    minHeight: 48,
+    height: 48,
   },
   registerButton: {
     backgroundColor: '#795548',
@@ -342,7 +351,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
     marginBottom: 16,
-    minHeight: 50,
+    height: 50,
   },
   registerButtonDisabled: {
     backgroundColor: '#ccc',
@@ -362,4 +371,5 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
+    
 

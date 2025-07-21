@@ -16,7 +16,7 @@ export interface Order {
   userId: string;
   items: CartItem[];
   total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'entregado' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'entregado' | 'delivered' | 'cancelled';
   deliveryAddress: string;
   additionalInfo?: string;
   paymentMethod: string;
@@ -236,8 +236,9 @@ export const orderService = {
       let url = `${API_BASE_URL}/pedidos`;
       const searchParams = new URLSearchParams();
       
-      if (params?.status) {
+      if (params?.status && params.status !== 'all') {
         searchParams.append('status', params.status);
+        searchParams.append('estado', params.status); // También buscar por "estado"
       }
       if (params?.page) {
         searchParams.append('page', params.page.toString());
@@ -267,7 +268,7 @@ export const orderService = {
         return {
           success: true,
           message: 'Pedidos obtenidos exitosamente',
-          data: data.pedidos || data.orders || data || []
+          data: data.pedidos || data.orders || data.data || data || []
         };
       } else {
         return {
