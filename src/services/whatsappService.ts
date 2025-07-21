@@ -20,7 +20,7 @@ export const whatsappService = {
   formatOrderMessage(orderData: OrderData): string {
     const { cartItems, total, deliveryAddress, paymentMethod, user, orderId } = orderData
 
-    let message = "🛒 *NUEVO PEDIDO - CAFETERÍA*\n\n"
+    let message = "🛒 *NUEVO PEDIDO -AMBER INFUSIÓN*\n\n"
 
     // Add order ID if available
     if (orderId) {
