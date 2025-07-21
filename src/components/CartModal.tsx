@@ -1,15 +1,15 @@
-import React from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Image,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import React from 'react';
+import {
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { CartItem } from '../types';
 
 interface CartModalProps {
@@ -74,7 +74,7 @@ export function CartModal({ visible, cart, onClose, onUpdateQuantity }: CartModa
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
                     <Text style={styles.itemDetails}>{`${item.pack} • Granos`}</Text>
-                    <Text style={styles.itemPrice}>{`$${item.price.toFixed(2)}`}</Text>
+                    <Text style={styles.itemPrice}>{`Bs${item.price.toFixed(2)}`}</Text>
                   </View>
                   <View style={styles.quantityControls}>
                     <TouchableOpacity
@@ -99,15 +99,15 @@ export function CartModal({ visible, cart, onClose, onUpdateQuantity }: CartModa
           <View style={styles.summary}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Artículos</Text>
-              <Text style={styles.summaryValue}>${items.toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>Bs{items.toFixed(2)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Descuentos</Text>
-              <Text style={styles.discountValue}>- ${discounts.toFixed(2)}</Text>
+              <Text style={styles.discountValue}>- Bs{discounts.toFixed(2)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+              <Text style={styles.totalValue}>Bs{total.toFixed(2)}</Text>
             </View>
             <TouchableOpacity 
               style={[styles.checkoutButton, cart.length === 0 && styles.disabledButton]} 

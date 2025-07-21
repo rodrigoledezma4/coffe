@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
 import {
+  Image,
   Modal,
-  View,
+  Pressable,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Image,
-  Pressable,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Product, CartItem, Pack } from '../types';
+import { CartItem, Pack, Product } from '../types';
 
 interface ProductDetailModalProps {
   visible: boolean;
@@ -119,7 +119,7 @@ export function ProductDetailModal({ visible, product, onClose, onAddToCart }: P
           <View style={styles.footer}>
             <View>
               <Text style={styles.priceLabel}>Precio Total:</Text>
-              <Text style={styles.totalPrice}>{`$${getPrice()}`}</Text>
+              <Text style={styles.totalPrice}>{`Bs${getPrice()}`}</Text>
             </View>
             <TouchableOpacity
               style={styles.addToCartBtn}

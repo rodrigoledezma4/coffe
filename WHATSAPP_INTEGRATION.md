@@ -84,10 +84,10 @@ El mensaje generado sigue este formato:
 1. Café Americano
    • Presentación: 250g
    • Cantidad: 2
-   • Precio unitario: $5.50
-   • Subtotal: $11.00
+   • Precio unitario: Bs5.50
+   • Subtotal: Bs11.00
 
-💰 *TOTAL: $17.00*
+💰 *TOTAL: Bs17.00*
 
 📍 *DIRECCIÓN DE ENTREGA:*
 Calle 123 # 45-67, Bogotá

@@ -1,16 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
+  Alert,
+  Image,
   Modal,
-  View,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  Image,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Product } from '../types';
 
 interface AdminPanelProps {
@@ -183,7 +183,7 @@ export function AdminPanel({
                   <Image source={{ uri: product.image }} style={styles.productImage} />
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{product.name}</Text>
-                    <Text style={styles.productPrice}>${product.price}</Text>
+                    <Text style={styles.productPrice}>Bs{product.price}</Text>
                   </View>
                   <View style={styles.productActions}>
                     <TouchableOpacity

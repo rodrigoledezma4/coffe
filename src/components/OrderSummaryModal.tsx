@@ -1,13 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
   Modal,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import { CartItem } from '../types';
 
@@ -48,13 +48,13 @@ export function OrderSummaryModal({
               <View key={index} style={styles.itemRow}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemDetails}>
-                  {item.pack} × {item.quantity} = ${(item.price * item.quantity).toFixed(2)}
+                  {item.pack} × {item.quantity} = Bs{(item.price * item.quantity).toFixed(2)}
                 </Text>
               </View>
             ))}
             
             <View style={styles.totalRow}>
-              <Text style={styles.totalText}>Total: ${total.toFixed(2)}</Text>
+              <Text style={styles.totalText}>Total: Bs{total.toFixed(2)}</Text>
             </View>
 
             <Text style={styles.sectionTitle}>Dirección:</Text>

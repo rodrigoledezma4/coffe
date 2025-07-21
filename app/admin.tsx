@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Image,
-  Alert,
-  ActivityIndicator,
-  RefreshControl,
-  Modal,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Product } from '../src/types';
 import { AddProductModal } from '../src/components/AddProductModal';
-import { productService } from '../src/services/api';
 import { useAuth } from '../src/context/AuthContext';
+import { productService } from '../src/services/api';
+import { Product } from '../src/types';
 
 export default function AdminScreen() {
   const { state } = useAuth();
@@ -310,7 +310,7 @@ export default function AdminScreen() {
                     {product.name}
                   </Text>
                   <Text style={styles.productPrice}>
-                    ${product.price.toFixed(2)}
+                    Bs{product.price.toFixed(2)}
                   </Text>
                   <Text style={styles.productStock}>
                     Stock: {product.stock}

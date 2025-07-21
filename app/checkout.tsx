@@ -1,20 +1,20 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
   Alert,
   Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../src/constants/Colors';
-import { CartItem } from '../src/types';
-import { whatsappService } from '../src/services/whatsappService';
 import { useAuth } from '../src/context/AuthContext';
+import { whatsappService } from '../src/services/whatsappService';
+import { CartItem } from '../src/types';
 
 export default function CheckoutScreen() {
   const params = useLocalSearchParams();
@@ -157,13 +157,13 @@ export default function CheckoutScreen() {
               <View style={styles.itemDetails}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemInfo}>{item.pack} • Cantidad: {item.quantity}</Text>
-                <Text style={styles.itemPrice}>${(item.price * item.quantity).toFixed(2)}</Text>
+                <Text style={styles.itemPrice}>Bs{(item.price * item.quantity).toFixed(2)}</Text>
               </View>
             </View>
           ))}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total a Pagar:</Text>
-            <Text style={styles.totalAmount}>${totalAmount.toFixed(2)}</Text>
+            <Text style={styles.totalAmount}>Bs{totalAmount.toFixed(2)}</Text>
           </View>
         </View>
 
@@ -191,7 +191,7 @@ export default function CheckoutScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.placeOrderButton} onPress={handlePlaceOrder}>
-          <Text style={styles.placeOrderText}>Realizar Pedido - ${totalAmount.toFixed(2)}</Text>
+          <Text style={styles.placeOrderText}>Realizar Pedido - Bs{totalAmount.toFixed(2)}</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -265,11 +265,11 @@ export default function SalesReportScreen() {
 
             {/* Summary Cards */}
             <View style={styles.summaryContainer}>
-              {renderSummaryCard("Ventas Totales", `$${salesData.totalSales.toFixed(2)}`, "cash", "#4CAF50")}
+              {renderSummaryCard("Ventas Totales", `Bs${salesData.totalSales.toFixed(2)}`, "cash", "#4CAF50")}
               {renderSummaryCard("Pedidos Totales", salesData.totalOrders.toString(), "receipt", "#2196F3")}
               {renderSummaryCard(
                 "Promedio por Pedido",
-                `$${salesData.averageOrderValue.toFixed(2)}`,
+                `Bs${salesData.averageOrderValue.toFixed(2)}`,
                 "trending-up",
                 "#FF9800",
               )}
@@ -282,7 +282,7 @@ export default function SalesReportScreen() {
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>{product.name}</Text>
                     <Text style={styles.productStats}>
-                      {product.quantity} unidades • ${product.revenue.toFixed(2)}
+                      {product.quantity} unidades • Bs{product.revenue.toFixed(2)}
                     </Text>
                   </View>
                   <View style={styles.rankBadge}>
@@ -299,7 +299,7 @@ export default function SalesReportScreen() {
                 <View key={index} style={styles.dayItem}>
                   <Text style={styles.dayDate}>{day.date}</Text>
                   <View style={styles.dayStats}>
-                    <Text style={styles.daySales}>${day.sales.toFixed(2)}</Text>
+                    <Text style={styles.daySales}>Bs{day.sales.toFixed(2)}</Text>
                     <Text style={styles.dayOrders}>{day.orders} pedidos</Text>
                   </View>
                 </View>

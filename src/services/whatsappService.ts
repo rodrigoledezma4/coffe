@@ -42,12 +42,12 @@ export const whatsappService = {
       message += `${index + 1}. ${item.name}\n`;
       message += `   • Presentación: ${item.pack}\n`;
       message += `   • Cantidad: ${item.quantity}\n`;
-      message += `   • Precio unitario: $${item.price.toFixed(2)}\n`;
-      message += `   • Subtotal: $${(item.price * item.quantity).toFixed(2)}\n\n`;
+      message += `   • Precio unitario: Bs${item.price.toFixed(2)}\n`;
+      message += `   • Subtotal: Bs${(item.price * item.quantity).toFixed(2)}\n\n`;
     });
     
     // Total
-    message += `💰 *TOTAL: $${total.toFixed(2)}*\n\n`;
+    message += `💰 *TOTAL: Bs${total.toFixed(2)}*\n\n`;
     
     // Dirección de entrega
     message += '📍 *DIRECCIÓN DE ENTREGA:*\n';

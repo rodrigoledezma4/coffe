@@ -299,7 +299,7 @@ export default function OrdersReportScreen() {
                       <Text style={styles.orderItem}>
                         {item.cantidad}x {item.productoId?.nomProd || "Producto"}
                       </Text>
-                      <Text style={styles.itemPrice}>${(item.precio * item.cantidad).toFixed(2)}</Text>
+                      <Text style={styles.itemPrice}>Bs{(item.precio * item.cantidad).toFixed(2)}</Text>
                     </View>
                   </View>
                 ))
@@ -310,7 +310,7 @@ export default function OrdersReportScreen() {
 
             <View style={styles.orderFooter}>
               <View>
-                <Text style={styles.orderTotal}>Total: ${order.total.toFixed(2)}</Text>
+                <Text style={styles.orderTotal}>Total: Bs{order.total.toFixed(2)}</Text>
               </View>
 
               {/* Action Buttons */}

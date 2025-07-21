@@ -11,9 +11,9 @@ import { RegisterModal } from "../src/components/RegisterModal"
 import { UserProfileModal } from "../src/components/UserProfileModal"
 import { Colors } from "../src/constants/Colors"
 import { useAuth } from "../src/context/AuthContext"
+import { socialMediaService } from "../src/services/socialMediaService"
 import type { CartItem, Product } from "../src/types"
 import { debugAPI } from "../src/utils/testApi"
-import { socialMediaService } from "../src/services/socialMediaService"
 
 export default function HomeScreen() {
   const { state, forceRefresh } = useAuth()
@@ -232,7 +232,7 @@ export default function HomeScreen() {
       />
       <View style={styles.info}>
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.price}>${item.price}</Text>
+        <Text style={styles.price}>Bs{item.price}</Text>
         {item.stock !== undefined && item.stock >= 0 && (
           <Text style={[styles.stock, item.stock === 0 && styles.outOfStock]}>
             {item.stock === 0 ? "Sin stock" : `Stock: ${item.stock}`}
