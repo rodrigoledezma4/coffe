@@ -32,9 +32,7 @@ export function ProductDetailModal({ visible, product, onClose, onAddToCart }: P
   if (!product || !visible) return null;
 
   const packs: Pack[] = [
-    { label: '250g', price: (product.price * 0.7).toFixed(2) },
-    { label: '500g', price: product.price.toFixed(2) },
-    { label: '750g', price: (product.price * 1.3).toFixed(2) },
+    { label: '50g', price: product.price.toFixed(2) }
   ];
 
   const getPrice = (): string => {

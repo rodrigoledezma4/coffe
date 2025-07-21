@@ -21,7 +21,7 @@ interface CartModalProps {
 
 export function CartModal({ visible, cart, onClose, onUpdateQuantity }: CartModalProps) {
   const items = cart.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0);
-  const discounts = cart.length > 0 ? 3 : 0;
+  const discounts = 0;
   const total = items - discounts;
   const totalItems = cart.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
 
