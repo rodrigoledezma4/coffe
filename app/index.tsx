@@ -1,224 +1,232 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FlatList, 
-  Image, 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  TextInput 
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { LoginModal } from '../src/components/LoginModal';
-import { RegisterModal } from '../src/components/RegisterModal';
-import { CartModal } from '../src/components/CartModal';
-import { ProductDetailModal } from '../src/components/ProductDetailModal';
-import { UserProfileModal } from '../src/components/UserProfileModal';
-import { useAuth } from '../src/context/AuthContext';
-import { Product, CartItem } from '../src/types';
-import { Colors } from '../src/constants/Colors';
-import { productService } from '../src/services/api';
-import { debugAPI } from '../src/utils/testApi';
+"use client"
 
+import { Ionicons } from "@expo/vector-icons"
+import { router } from "expo-router"
+import React, { useEffect, useState } from "react"
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { CartModal } from "../src/components/CartModal"
+import { LoginModal } from "../src/components/LoginModal"
+import { ProductDetailModal } from "../src/components/ProductDetailModal"
+import { RegisterModal } from "../src/components/RegisterModal"
+import { UserProfileModal } from "../src/components/UserProfileModal"
+import { Colors } from "../src/constants/Colors"
+import { useAuth } from "../src/context/AuthContext"
+import type { CartItem, Product } from "../src/types"
+import { debugAPI } from "../src/utils/testApi"
 
 export default function HomeScreen() {
-  const { state, forceRefresh } = useAuth();
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [cartVisible, setCartVisible] = useState<boolean>(false);
-  const [loginVisible, setLoginVisible] = useState<boolean>(false);
-  const [registerVisible, setRegisterVisible] = useState<boolean>(false);
-  const [userProfileVisible, setUserProfileVisible] = useState<boolean>(false);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const { state, forceRefresh } = useAuth()
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [cartVisible, setCartVisible] = useState<boolean>(false)
+  const [loginVisible, setLoginVisible] = useState<boolean>(false)
+  const [registerVisible, setRegisterVisible] = useState<boolean>(false)
+  const [userProfileVisible, setUserProfileVisible] = useState<boolean>(false)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState<boolean>(false)
+  const [searchQuery, setSearchQuery] = useState<string>("")
 
   // Function to load ALL products from database
   const loadProductsFromAPI = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      console.log('🔄 Home: Loading ALL products from database...');
-      
-      const response = await fetch('https://back-coffee.onrender.com/api/productos', {
-        method: 'GET',
+      console.log("🔄 Home: Loading ALL products from database...")
+
+      const response = await fetch("https://back-coffee.onrender.com/api/productos", {
+        method: "GET",
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
+          Accept: "application/json",
+          "Content-Type": "application/json",
         },
-      });
-      
-      console.log('📡 Home API Response status:', response.status);
-      
+      })
+
+      console.log("📡 Home API Response status:", response.status)
+
       if (response.ok) {
-        const data = await response.json();
-        console.log('📦 Home API response raw data:', JSON.stringify(data, null, 2));
-        
+        const data = await response.json()
+        console.log("📦 Home API response raw data:", JSON.stringify(data, null, 2))
+
         // Extraer productos de la estructura correcta según las imágenes
-        let productsArray = [];
-        
+        let productsArray = []
+
         if (data && data.data && data.data.productos && Array.isArray(data.data.productos)) {
-          productsArray = data.data.productos;
-          console.log('✅ Found products in data.data.productos:', productsArray.length);
+          productsArray = data.data.productos
+          console.log("✅ Found products in data.data.productos:", productsArray.length)
         } else if (data && data.productos && Array.isArray(data.productos)) {
-          productsArray = data.productos;
-          console.log('✅ Found products in data.productos:', productsArray.length);
+          productsArray = data.productos
+          console.log("✅ Found products in data.productos:", productsArray.length)
         } else if (Array.isArray(data)) {
-          productsArray = data;
-          console.log('✅ Found products as direct array:', productsArray.length);
+          productsArray = data
+          console.log("✅ Found products as direct array:", productsArray.length)
         } else {
-          console.log('❌ No products array found in response structure');
-          console.log('📦 Available keys:', Object.keys(data || {}));
+          console.log("❌ No products array found in response structure")
+          console.log("📦 Available keys:", Object.keys(data || {}))
         }
-        
-        console.log('📋 Products array to process:', productsArray);
-        
+
+        console.log("📋 Products array to process:", productsArray)
+
         if (Array.isArray(productsArray) && productsArray.length > 0) {
           const formattedProducts: Product[] = productsArray.map((product: any, index: number) => {
-            console.log(`🔄 Processing product ${index + 1}:`, product);
-            
+            console.log(`🔄 Processing product ${index + 1}:`, product)
+
             const formattedProduct = {
               id: product._id || product.id || `product_${Date.now()}_${index}`,
-              name: product.nomProd || product.nombre || product.name || 'Producto sin nombre',
+              name: product.nomProd || product.nombre || product.name || "Producto sin nombre",
               price: Number(product.precioProd || product.precio || product.price || 0),
-              image: product.imagen || product.image || 'https://via.placeholder.com/300x200?text=Sin+Imagen',
-              description: product.descripcionProd || product.descripcion || product.description || '',
+              image: product.imagen || product.image || "https://via.placeholder.com/300x200?text=Sin+Imagen",
+              description: product.descripcionProd || product.descripcion || product.description || "",
               stock: Number(product.stock || 0),
-              category: product.categoria || product.category || 'cafe',
-            };
-            
-            console.log(`✅ Formatted product ${index + 1}:`, formattedProduct);
-            return formattedProduct;
-          });
-          
-          console.log('✅ Home: Products loaded successfully:', formattedProducts.length);
-          console.log('📊 All formatted products:', formattedProducts);
-          setProducts(formattedProducts);
-          
+              category: product.categoria || product.category || "cafe",
+            }
+
+            console.log(`✅ Formatted product ${index + 1}:`, formattedProduct)
+            return formattedProduct
+          })
+
+          console.log("✅ Home: Products loaded successfully:", formattedProducts.length)
+          console.log("📊 All formatted products:", formattedProducts)
+          setProducts(formattedProducts)
+
           // Force re-render
           setTimeout(() => {
-            console.log('🔄 Products state after setting:', formattedProducts.length);
-          }, 100);
+            console.log("🔄 Products state after setting:", formattedProducts.length)
+          }, 100)
         } else {
-          console.log('⚠️ Home: No products found or invalid array structure');
-          console.log('📦 Received data structure:', typeof data, data);
-          setProducts([]);
+          console.log("⚠️ Home: No products found or invalid array structure")
+          console.log("📦 Received data structure:", typeof data, data)
+          setProducts([])
         }
       } else {
-        console.log(`❌ Home: API failed with status ${response.status}`);
-        const errorText = await response.text();
-        console.log('❌ Home Error response:', errorText);
-        setProducts([]);
+        console.log(`❌ Home: API failed with status ${response.status}`)
+        const errorText = await response.text()
+        console.log("❌ Home Error response:", errorText)
+        setProducts([])
       }
     } catch (error) {
-      console.error('❌ Home: Error loading products:', error);
-      setProducts([]);
+      console.error("❌ Home: Error loading products:", error)
+      setProducts([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // Cargar productos al montar el componente
   useEffect(() => {
-    debugAPI(); // Para debug
-    loadProductsFromAPI();
-  }, []);
+    debugAPI() // Para debug
+    loadProductsFromAPI()
+  }, [])
 
   // Recargar productos cuando se cree un nuevo producto (si es admin)
   useEffect(() => {
-    if (state.isAuthenticated && state.user?.role === 'admin') {
-      console.log('🔑 Admin logged in - reloading products');
-      loadProductsFromAPI();
+    if (state.isAuthenticated && state.user?.role === "admin") {
+      console.log("🔑 Admin logged in - reloading products")
+      loadProductsFromAPI()
     }
-  }, [state.isAuthenticated, state.user?.role]);
+  }, [state.isAuthenticated, state.user?.role])
+
+  // Agregar este useEffect después de los existentes para monitorear cambios en el estado de autenticación
+  React.useEffect(() => {
+    console.log("🔍 Auth state changed in HomeScreen:", {
+      isAuthenticated: state.isAuthenticated,
+      userEmail: state.user?.email || "none",
+      userRole: state.user?.role || "none",
+      timestamp: new Date().toISOString(),
+    })
+
+    if (state.isAuthenticated && state.user) {
+      console.log("👤 Current user details:", {
+        id: state.user.id,
+        email: state.user.email,
+        name: state.user.name,
+        role: state.user.role,
+        isAdmin: state.user.role === "admin",
+      })
+    }
+  }, [state.isAuthenticated, state.user])
 
   const handleAddToCart = (item: CartItem) => {
     setCart((prev: CartItem[]) => {
-      const idx = prev.findIndex(
-        (p: CartItem) => p.id === item.id && p.pack === item.pack
-      );
+      const idx = prev.findIndex((p: CartItem) => p.id === item.id && p.pack === item.pack)
       if (idx !== -1) {
-        const updated = [...prev];
-        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + item.quantity };
-        return updated;
+        const updated = [...prev]
+        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + item.quantity }
+        return updated
       }
-      return [...prev, item];
-    });
-  };
+      return [...prev, item]
+    })
+  }
 
   const handleUpdateQuantity = (item: CartItem, newQty: number) => {
     setCart((prev: CartItem[]) =>
-      prev.map((p: CartItem) =>
-        p.id === item.id && p.pack === item.pack
-          ? { ...p, quantity: newQty }
-          : p
-      ).filter(p => p.quantity > 0)
-    );
-  };
+      prev
+        .map((p: CartItem) => (p.id === item.id && p.pack === item.pack ? { ...p, quantity: newQty } : p))
+        .filter((p) => p.quantity > 0),
+    )
+  }
 
   const handleNavigateToRegister = () => {
-    setLoginVisible(false);
-    setRegisterVisible(true);
-  };
+    setLoginVisible(false)
+    setRegisterVisible(true)
+  }
 
   const handleNavigateToLogin = () => {
-    setRegisterVisible(false);
-    setLoginVisible(true);
-  };
+    setRegisterVisible(false)
+    setLoginVisible(true)
+  }
 
   const handleCloseAuth = () => {
-    setLoginVisible(false);
-    setRegisterVisible(false);
-  };
+    setLoginVisible(false)
+    setRegisterVisible(false)
+  }
 
   const handleGoToAdmin = () => {
-    router.push('/admin');
-  };
+    router.push("/admin")
+  }
 
   const handleUserIconPress = () => {
     if (state.isAuthenticated) {
-      setUserProfileVisible(true);
+      setUserProfileVisible(true)
     } else {
-      setLoginVisible(true);
+      setLoginVisible(true)
     }
-  };
+  }
 
   // Cerrar modal de perfil automáticamente si el usuario se desloguea
   React.useEffect(() => {
     if (!state.isAuthenticated && userProfileVisible) {
-      console.log('🔄 User logged out - closing profile modal');
-      setUserProfileVisible(false);
+      console.log("🔄 User logged out - closing profile modal")
+      setUserProfileVisible(false)
     }
-  }, [state.isAuthenticated, userProfileVisible]);
+  }, [state.isAuthenticated, userProfileVisible])
 
   // Efecto para debug y forzar actualización visual
   React.useEffect(() => {
-    console.log('🔍 Auth state changed:', {
+    console.log("🔍 Auth state changed:", {
       isAuthenticated: state.isAuthenticated,
-      user: state.user?.email || 'none',
-      timestamp: new Date().toISOString()
-    });
-    
+      user: state.user?.email || "none",
+      timestamp: new Date().toISOString(),
+    })
+
     // Si no está autenticado, asegurar que todos los modals estén cerrados
     if (!state.isAuthenticated) {
-      setUserProfileVisible(false);
+      setUserProfileVisible(false)
     }
-  }, [state.isAuthenticated, state.user]);
+  }, [state.isAuthenticated, state.user])
 
   // Filtrar productos por búsqueda
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredProducts = products.filter(
+    (product) =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())),
+  )
 
   const renderProductItem = ({ item }: { item: Product }) => (
     <TouchableOpacity onPress={() => setSelectedProduct(item)} style={styles.card}>
-      <Image 
-        source={{ uri: item.image }} 
+      <Image
+        source={{ uri: item.image }}
         style={styles.image}
         onError={(e) => {
-          console.log('❌ Image load error for product:', item.name, e.nativeEvent.error);
+          console.log("❌ Image load error for product:", item.name, e.nativeEvent.error)
         }}
       />
       <View style={styles.info}>
@@ -226,22 +234,20 @@ export default function HomeScreen() {
         <Text style={styles.price}>${item.price}</Text>
         {item.stock !== undefined && item.stock >= 0 && (
           <Text style={[styles.stock, item.stock === 0 && styles.outOfStock]}>
-            {item.stock === 0 ? 'Sin stock' : `Stock: ${item.stock}`}
+            {item.stock === 0 ? "Sin stock" : `Stock: ${item.stock}`}
           </Text>
         )}
-        {item.category && (
-          <Text style={styles.category}>{item.category}</Text>
-        )}
+        {item.category && <Text style={styles.category}>{item.category}</Text>}
       </View>
     </TouchableOpacity>
-  );
+  )
 
   const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity onPress={handleUserIconPress} style={styles.iconButton}>
-        <Ionicons 
-          name={state.isAuthenticated ? "person-circle" : "person-circle-outline"} 
-          size={32} 
+        <Ionicons
+          name={state.isAuthenticated ? "person-circle" : "person-circle-outline"}
+          size={32}
           color={Colors.light.primary}
         />
       </TouchableOpacity>
@@ -249,7 +255,7 @@ export default function HomeScreen() {
         <Text style={styles.title}>Productos de Café</Text>
       </View>
       <View style={styles.headerRight}>
-        {state.isAuthenticated && state.user?.role === 'admin' && (
+        {state.isAuthenticated && state.user?.role === "admin" && (
           <TouchableOpacity onPress={handleGoToAdmin} style={styles.adminButton}>
             <Ionicons name="settings" size={24} color="#fff" />
           </TouchableOpacity>
@@ -266,7 +272,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
     </View>
-  );
+  )
 
   const renderSearchBar = () => (
     <View style={styles.searchContainer}>
@@ -279,25 +285,23 @@ export default function HomeScreen() {
         placeholderTextColor={Colors.light.icon}
       />
       {searchQuery.length > 0 && (
-        <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+        <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearButton}>
           <Ionicons name="close-circle" size={20} color={Colors.light.icon} />
         </TouchableOpacity>
       )}
     </View>
-  );
+  )
 
   const renderProductStats = () => (
     <View style={styles.statsContainer}>
-      <Text style={styles.statsText}>
-        {loading ? 'Cargando...' : `${products.length} productos encontrados`}
-      </Text>
+      <Text style={styles.statsText}>{loading ? "Cargando..." : `${products.length} productos encontrados`}</Text>
       {!loading && (
         <TouchableOpacity onPress={loadProductsFromAPI} style={styles.refreshButton}>
           <Ionicons name="refresh" size={16} color={Colors.light.primary} />
         </TouchableOpacity>
       )}
     </View>
-  );
+  )
 
   return (
     <View style={styles.container}>
@@ -322,7 +326,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshing={loading}
         onRefresh={loadProductsFromAPI}
-        ListEmptyComponent={() => (
+        ListEmptyComponent={() =>
           !loading && (
             <View style={styles.emptyContainer}>
               <Ionicons name="cafe" size={64} color={Colors.light.icon} />
@@ -332,7 +336,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
           )
-        )}
+        }
       />
 
       <ProductDetailModal
@@ -349,122 +353,111 @@ export default function HomeScreen() {
         onUpdateQuantity={handleUpdateQuantity}
       />
 
-      <LoginModal
-        visible={loginVisible}
-        onClose={handleCloseAuth}
-        onNavigateToRegister={handleNavigateToRegister}
-      />
+      <LoginModal visible={loginVisible} onClose={handleCloseAuth} onNavigateToRegister={handleNavigateToRegister} />
 
-      <RegisterModal
-        visible={registerVisible}
-        onClose={handleCloseAuth}
-        onNavigateToLogin={handleNavigateToLogin}
-      />
+      <RegisterModal visible={registerVisible} onClose={handleCloseAuth} onNavigateToLogin={handleNavigateToLogin} />
 
-      <UserProfileModal
-        visible={userProfileVisible}
-        onClose={() => setUserProfileVisible(false)}
-      />
+      <UserProfileModal visible={userProfileVisible} onClose={() => setUserProfileVisible(false)} />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: Colors.light.background, 
-    paddingTop: 48, 
-    paddingHorizontal: 16 
+  container: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+    paddingTop: 48,
+    paddingHorizontal: 16,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 16,
   },
   iconButton: {
     width: 40,
     height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   titleContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
     color: Colors.light.text,
   },
   headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   adminButton: {
-    backgroundColor: '#795548',
+    backgroundColor: "#795548",
     borderRadius: 20,
     width: 40,
     height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cartContainer: {
-    position: 'relative',
+    position: "relative",
     width: 40,
     height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cartBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -4,
     right: -4,
     backgroundColor: Colors.light.accent,
     borderRadius: 8,
     paddingHorizontal: 5,
     minWidth: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cartBadgeText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: 12,
   },
   listContainer: {
     paddingBottom: 24,
   },
-  card: { 
-    flexDirection: 'row', 
-    backgroundColor: Colors.light.surface, 
-    borderRadius: 12, 
-    marginBottom: 16, 
-    overflow: 'hidden' 
+  card: {
+    flexDirection: "row",
+    backgroundColor: Colors.light.surface,
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: "hidden",
   },
-  image: { 
-    width: 90, 
-    height: 90 
+  image: {
+    width: 90,
+    height: 90,
   },
-  info: { 
-    flex: 1, 
-    padding: 12, 
-    justifyContent: 'center' 
+  info: {
+    flex: 1,
+    padding: 12,
+    justifyContent: "center",
   },
-  name: { 
-    fontSize: 18, 
-    fontWeight: '600',
+  name: {
+    fontSize: 18,
+    fontWeight: "600",
     color: Colors.light.text,
   },
-  price: { 
-    fontSize: 16, 
-    color: Colors.light.primary, 
-    marginTop: 4 
+  price: {
+    fontSize: 16,
+    color: Colors.light.primary,
+    marginTop: 4,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.light.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -483,7 +476,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   loadingContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 20,
   },
   loadingText: {
@@ -497,9 +490,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 4,
     marginBottom: 8,
   },
@@ -514,14 +507,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.primary,
     marginTop: 2,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   outOfStock: {
     color: Colors.light.error,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   emptyContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
   },
   emptyText: {
@@ -537,15 +530,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
-});
-
-
-
-
-
-
-
-
+})

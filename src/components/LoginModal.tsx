@@ -1,94 +1,99 @@
-import React, { useState } from 'react';
+"use client"
+
+import { Ionicons } from "@expo/vector-icons"
+import React, { useState } from "react"
 import {
+  Alert,
+  KeyboardAvoidingView,
   Modal,
-  View,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
+  View,
+} from "react-native"
+import { useAuth } from "../context/AuthContext"
 
 interface LoginModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onNavigateToRegister: () => void;
+  visible: boolean
+  onClose: () => void
+  onNavigateToRegister: () => void
 }
 
-export function LoginModal({
-  visible,
-  onClose,
-  onNavigateToRegister,
-}: LoginModalProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { loginWithApi, loginAsAdmin } = useAuth();
+export function LoginModal({ visible, onClose, onNavigateToRegister }: LoginModalProps) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const { loginWithApi, loginAsAdmin } = useAuth()
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Por favor, completa todos los campos.');
-      return;
+      Alert.alert("Error", "Por favor, completa todos los campos.")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
-      const trimmedEmail = email.trim().toLowerCase();
+      const trimmedEmail = email.trim().toLowerCase()
 
-      if (trimmedEmail === 'admin@gmail.com' && password === 'admin123') {
-        await loginAsAdmin();
-        resetFields();
-        onClose();
-        Alert.alert('Éxito', 'Bienvenido Administrador');
-        return;
+      // Mantener el login hardcodeado de admin como fallback
+      if (trimmedEmail === "admin@gmail.com" && password === "admin123") {
+        await loginAsAdmin()
+        resetFields()
+        onClose()
+        Alert.alert("Éxito", "Bienvenido Administrador (Hardcoded)")
+        return
       }
 
-      const success = await loginWithApi(email, password);
+      // Intentar login con API
+      const success = await loginWithApi(email, password)
 
       if (success) {
-        console.log('✅ Inicio de sesión exitoso desde modal');
-        resetFields();
-        onClose();
-        Alert.alert('Éxito', 'Has iniciado sesión correctamente.');
+        console.log("✅ Inicio de sesión exitoso desde modal")
+        resetFields()
+        onClose()
+
+        // Obtener el estado actualizado del contexto para mostrar mensaje apropiado
+        // Nota: Esto se ejecutará después de que el contexto se actualice
+        setTimeout(() => {
+          // El contexto debería estar actualizado ahora
+          console.log("🔍 Checking user role after login...")
+        }, 100)
+
+        Alert.alert("Éxito", "Has iniciado sesión correctamente.")
       } else {
-        Alert.alert('Error', 'Correo o contraseña incorrectos.');
+        Alert.alert("Error", "Correo o contraseña incorrectos.")
       }
     } catch (error) {
-      console.error('❌ Error en login:', error);
-      Alert.alert('Error', 'Error de conexión. Verifica tu internet.');
+      console.error("❌ Error en login:", error)
+      Alert.alert("Error", "Error de conexión. Verifica tu internet.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const resetFields = () => {
-    setEmail('');
-    setPassword('');
-  };
+    setEmail("")
+    setPassword("")
+  }
 
   const handleClose = () => {
-    resetFields();
-    onClose();
-  };
+    resetFields()
+    onClose()
+  }
 
   const handleNavigateToRegister = () => {
-    resetFields();
-    onNavigateToRegister();
-  };
+    resetFields()
+    onNavigateToRegister()
+  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalOverlay}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.keyboardView}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboardView}>
           <View style={styles.modalContent}>
             <View style={styles.header}>
               <TouchableOpacity onPress={handleClose}>
@@ -132,66 +137,60 @@ export function LoginModal({
                 onPress={handleLogin}
                 disabled={loading}
               >
-                <Text style={styles.loginButtonText}>
-                  {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-                </Text>
+                <Text style={styles.loginButtonText}>{loading ? "Iniciando sesión..." : "Iniciar Sesión"}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.registerLink} onPress={handleNavigateToRegister} disabled={loading}>
-                <Text style={styles.registerLinkText}>
-                  ¿No tienes cuenta? Regístrate aquí
-                </Text>
+                <Text style={styles.registerLinkText}>¿No tienes cuenta? Regístrate aquí</Text>
               </TouchableOpacity>
 
               <View style={styles.adminHint}>
-                <Text style={styles.adminHintText}>
-                  Admin: admin@gmail.com / admin123
-                </Text>
+                <Text style={styles.adminHintText}>Admin: admin@gmail.com / admin123</Text>
               </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   keyboardView: {
     flex: 1,
-    justifyContent: 'center',
-    width: '100%',
+    justifyContent: "center",
+    width: "100%",
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 24,
     padding: 24,
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
     minHeight: 400,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 24,
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#222',
+    fontWeight: "bold",
+    color: "#222",
   },
   formContainer: {
     flexGrow: 1,
@@ -201,54 +200,54 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: "#f8f8f8",
     minHeight: 48,
   },
   loginButton: {
-    backgroundColor: '#795548',
+    backgroundColor: "#795548",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
     marginBottom: 16,
   },
   loginButtonDisabled: {
-    backgroundColor: '#bbb',
+    backgroundColor: "#bbb",
   },
   loginButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   registerLink: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 12,
   },
   registerLinkText: {
-    color: '#795548',
+    color: "#795548",
     fontSize: 14,
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
   adminHint: {
     marginTop: 20,
     padding: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 8,
   },
   adminHintText: {
     fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
-});
+})
