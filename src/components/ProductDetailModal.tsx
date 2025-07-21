@@ -19,12 +19,12 @@ interface ProductDetailModalProps {
 }
 
 export function ProductDetailModal({ visible, product, onClose, onAddToCart }: ProductDetailModalProps) {
-  const [selectedPack, setSelectedPack] = useState<string>('500g');
+  const [selectedPack, setSelectedPack] = useState<string>('50g');
   const [quantity, setQuantity] = useState<number>(1);
 
   useEffect(() => {
     if (visible) {
-      setSelectedPack('500g');
+      setSelectedPack('50g');
       setQuantity(1);
     }
   }, [product, visible]);
