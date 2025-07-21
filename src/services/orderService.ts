@@ -16,7 +16,7 @@ export interface Order {
   userId: string;
   items: CartItem[];
   total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'entregado' | 'cancelled';
   deliveryAddress: string;
   additionalInfo?: string;
   paymentMethod: string;
@@ -222,5 +222,67 @@ export const orderService = {
         message: 'Error de conexión al cancelar el pedido'
       };
     }
-  }
+  },
+
+  async getAllOrdersForAdmin(token: string, params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<OrderResponse> {
+    try {
+      console.log('📋 OrderService: Getting all orders for admin with params:', params);
+      
+      // Build URL with parameters
+      let url = `${API_BASE_URL}/pedidos`;
+      const searchParams = new URLSearchParams();
+      
+      if (params?.status) {
+        searchParams.append('status', params.status);
+      }
+      if (params?.page) {
+        searchParams.append('page', params.page.toString());
+      }
+      if (params?.limit) {
+        searchParams.append('limit', params.limit.toString());
+      }
+      
+      if (searchParams.toString()) {
+        url += `?${searchParams.toString()}`;
+      }
+      
+      console.log('🌐 Final orders URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('📡 OrderService: Get all orders response:', response.status, data);
+
+      if (response.ok) {
+        return {
+          success: true,
+          message: 'Pedidos obtenidos exitosamente',
+          data: data.pedidos || data.orders || data || []
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || 'Error al obtener los pedidos',
+          data: []
+        };
+      }
+    } catch (error) {
+      console.error('❌ OrderService: Get all orders error:', error);
+      return {
+        success: false,
+        message: 'Error de conexión al obtener los pedidos',
+        data: []
+      };
+    }
+  },
 };

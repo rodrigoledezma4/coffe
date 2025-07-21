@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { orderService } from '../src/services/orderService';
+import { useAuth } from '../src/context/AuthContext';
 
 interface SalesData {
   totalSales: number;
@@ -20,39 +22,170 @@ interface SalesData {
 }
 
 export default function SalesReportScreen() {
+  const { state } = useAuth();
   const [salesData, setSalesData] = useState<SalesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('7days'); // 7days, 30days, 90days
 
   const loadSalesData = async () => {
+    if (!state.token) {
+      Alert.alert('Error', 'No tienes autorización para ver los reportes');
+      router.back();
+      return;
+    }
+
     setLoading(true);
     try {
-      // Simular datos de ventas (aquí conectarías con tu API real)
-      const mockData: SalesData = {
-        totalSales: 2450.75,
-        totalOrders: 87,
-        averageOrderValue: 28.17,
-        topProducts: [
-          { name: 'Café Americano', quantity: 45, revenue: 675.00 },
-          { name: 'Latte Vainilla', quantity: 32, revenue: 512.00 },
-          { name: 'Cappuccino', quantity: 28, revenue: 420.00 },
-        ],
-        dailySales: [
-          { date: '2024-01-15', sales: 350.25, orders: 12 },
-          { date: '2024-01-14', sales: 420.50, orders: 15 },
-          { date: '2024-01-13', sales: 280.75, orders: 10 },
-        ],
-      };
+      console.log('📊 Loading sales data from API...');
       
-      setTimeout(() => {
-        setSalesData(mockData);
-        setLoading(false);
-      }, 1000);
+      // Obtener todos los pedidos (sin filtro de status aquí)
+      const result = await orderService.getAllOrdersForAdmin(state.token, {
+        limit: 1000 // Obtener muchos pedidos para el análisis
+      });
+
+      if (result.success && result.data) {
+        console.log('📦 Raw API response:', result.data);
+        console.log('📦 Type of result.data:', typeof result.data);
+        console.log('📦 Is array?:', Array.isArray(result.data));
+        
+        // Validar que result.data sea un array
+        let orders = [];
+        if (Array.isArray(result.data)) {
+          orders = result.data;
+        } else if (result.data.orders && Array.isArray(result.data.orders)) {
+          orders = result.data.orders;
+        } else if (result.data.pedidos && Array.isArray(result.data.pedidos)) {
+          orders = result.data.pedidos;
+        } else {
+          console.log('❌ No valid orders array found in response');
+          console.log('📦 Available keys:', Object.keys(result.data || {}));
+          setSalesData({
+            totalSales: 0,
+            totalOrders: 0,
+            averageOrderValue: 0,
+            topProducts: [],
+            dailySales: []
+          });
+          return;
+        }
+        
+        console.log('📦 Orders array found:', orders.length);
+        console.log('📋 Sample order:', orders[0]);
+        
+        // Filtrar solo pedidos entregados para calcular ventas
+        const deliveredOrders = orders.filter((order: any) => 
+          order.status === 'entregado' || order.status === 'delivered'
+        );
+        
+        console.log('✅ Delivered orders found:', deliveredOrders.length);
+        
+        // Calcular estadísticas de ventas
+        const calculatedSalesData = calculateSalesData(deliveredOrders, dateRange);
+        setSalesData(calculatedSalesData);
+      } else {
+        console.error('❌ Failed to load orders:', result.message);
+        Alert.alert('Error', result.message || 'No se pudieron cargar los datos de ventas');
+        setSalesData({
+          totalSales: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+          topProducts: [],
+          dailySales: []
+        });
+      }
     } catch (error) {
-      console.error('Error loading sales data:', error);
-      Alert.alert('Error', 'No se pudieron cargar los datos de ventas');
+      console.error('❌ Error loading sales data:', error);
+      Alert.alert('Error', 'Error de conexión al cargar los datos');
+      setSalesData({
+        totalSales: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        topProducts: [],
+        dailySales: []
+      });
+    } finally {
       setLoading(false);
     }
+  };
+
+  const calculateSalesData = (orders: any[], range: string): SalesData => {
+    // Filtrar pedidos por rango de fechas
+    const now = new Date();
+    const daysBack = range === '7days' ? 7 : range === '30days' ? 30 : 90;
+    const startDate = new Date(now.getTime() - (daysBack * 24 * 60 * 60 * 1000));
+    
+    const filteredOrders = orders.filter(order => {
+      const orderDate = new Date(order.createdAt || order.fecha || order.date);
+      return orderDate >= startDate;
+    });
+
+    // Calcular totales
+    const totalSales = filteredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+    const totalOrders = filteredOrders.length;
+    const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+    // Calcular productos más vendidos
+    const productMap = new Map();
+    filteredOrders.forEach(order => {
+      if (order.items && Array.isArray(order.items)) {
+        order.items.forEach((item: any) => {
+          const name = item.name || item.nomProd || item.producto;
+          const quantity = item.quantity || item.cantidad || 1;
+          const price = item.price || item.precio || 0;
+          
+          if (productMap.has(name)) {
+            const existing = productMap.get(name);
+            productMap.set(name, {
+              quantity: existing.quantity + quantity,
+              revenue: existing.revenue + (price * quantity)
+            });
+          } else {
+            productMap.set(name, {
+              quantity: quantity,
+              revenue: price * quantity
+            });
+          }
+        });
+      }
+    });
+
+    const topProducts = Array.from(productMap.entries())
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    // Calcular ventas diarias
+    const dailyMap = new Map();
+    filteredOrders.forEach(order => {
+      const orderDate = new Date(order.createdAt || order.fecha || order.date);
+      const dateKey = orderDate.toISOString().split('T')[0];
+      
+      if (dailyMap.has(dateKey)) {
+        const existing = dailyMap.get(dateKey);
+        dailyMap.set(dateKey, {
+          sales: existing.sales + (order.total || 0),
+          orders: existing.orders + 1
+        });
+      } else {
+        dailyMap.set(dateKey, {
+          sales: order.total || 0,
+          orders: 1
+        });
+      }
+    });
+
+    const dailySales = Array.from(dailyMap.entries())
+      .map(([date, data]) => ({ date, ...data }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 7);
+
+    return {
+      totalSales,
+      totalOrders,
+      averageOrderValue,
+      topProducts,
+      dailySales
+    };
   };
 
   useEffect(() => {
@@ -80,7 +213,7 @@ export default function SalesReportScreen() {
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#795548" />
-          <Text style={styles.loadingText}>Cargando reportes...</Text>
+          <Text style={styles.loadingText}>Cargando datos reales...</Text>
         </View>
       </View>
     );
@@ -93,90 +226,105 @@ export default function SalesReportScreen() {
           <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
         <Text style={styles.title}>Reportes de Ventas</Text>
+        <TouchableOpacity onPress={loadSalesData} style={styles.refreshButton}>
+          <Ionicons name="refresh" size={24} color="#795548" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Date Range Selector */}
-        <View style={styles.dateRangeContainer}>
-          <TouchableOpacity
-            style={[styles.dateButton, dateRange === '7days' && styles.activeDateButton]}
-            onPress={() => setDateRange('7days')}
-          >
-            <Text style={[styles.dateButtonText, dateRange === '7days' && styles.activeDateButtonText]}>
-              7 días
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.dateButton, dateRange === '30days' && styles.activeDateButton]}
-            onPress={() => setDateRange('30days')}
-          >
-            <Text style={[styles.dateButtonText, dateRange === '30days' && styles.activeDateButtonText]}>
-              30 días
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.dateButton, dateRange === '90days' && styles.activeDateButton]}
-            onPress={() => setDateRange('90days')}
-          >
-            <Text style={[styles.dateButtonText, dateRange === '90days' && styles.activeDateButtonText]}>
-              90 días
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          {renderSummaryCard(
-            'Ventas Totales',
-            `$${salesData?.totalSales.toFixed(2)}`,
-            'cash',
-            '#4CAF50'
-          )}
-          {renderSummaryCard(
-            'Pedidos Totales',
-            salesData?.totalOrders.toString() || '0',
-            'receipt',
-            '#2196F3'
-          )}
-          {renderSummaryCard(
-            'Promedio por Pedido',
-            `$${salesData?.averageOrderValue.toFixed(2)}`,
-            'trending-up',
-            '#FF9800'
-          )}
-        </View>
-
-        {/* Top Products */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Productos Más Vendidos</Text>
-          {salesData?.topProducts.map((product, index) => (
-            <View key={index} style={styles.productItem}>
-              <View style={styles.productInfo}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productStats}>
-                  {product.quantity} unidades • ${product.revenue.toFixed(2)}
+        {!salesData ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="bar-chart-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyText}>No hay datos de ventas disponibles</Text>
+            <TouchableOpacity onPress={loadSalesData} style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Date Range Selector */}
+            <View style={styles.dateRangeContainer}>
+              <TouchableOpacity
+                style={[styles.dateButton, dateRange === '7days' && styles.activeDateButton]}
+                onPress={() => setDateRange('7days')}
+              >
+                <Text style={[styles.dateButtonText, dateRange === '7days' && styles.activeDateButtonText]}>
+                  7 días
                 </Text>
-              </View>
-              <View style={styles.rankBadge}>
-                <Text style={styles.rankText}>{index + 1}</Text>
-              </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dateButton, dateRange === '30days' && styles.activeDateButton]}
+                onPress={() => setDateRange('30days')}
+              >
+                <Text style={[styles.dateButtonText, dateRange === '30days' && styles.activeDateButtonText]}>
+                  30 días
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dateButton, dateRange === '90days' && styles.activeDateButton]}
+                onPress={() => setDateRange('90days')}
+              >
+                <Text style={[styles.dateButtonText, dateRange === '90days' && styles.activeDateButtonText]}>
+                  90 días
+                </Text>
+              </TouchableOpacity>
             </View>
-          ))}
-        </View>
 
-        {/* Daily Sales */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ventas Diarias</Text>
-          {salesData?.dailySales.map((day, index) => (
-            <View key={index} style={styles.dayItem}>
-              <Text style={styles.dayDate}>{day.date}</Text>
-              <View style={styles.dayStats}>
-                <Text style={styles.daySales}>${day.sales.toFixed(2)}</Text>
-                <Text style={styles.dayOrders}>{day.orders} pedidos</Text>
-              </View>
+            {/* Summary Cards */}
+            <View style={styles.summaryContainer}>
+              {renderSummaryCard(
+                'Ventas Totales',
+                `$${salesData.totalSales.toFixed(2)}`,
+                'cash',
+                '#4CAF50'
+              )}
+              {renderSummaryCard(
+                'Pedidos Totales',
+                salesData.totalOrders.toString(),
+                'receipt',
+                '#2196F3'
+              )}
+              {renderSummaryCard(
+                'Promedio por Pedido',
+                `$${salesData.averageOrderValue.toFixed(2)}`,
+                'trending-up',
+                '#FF9800'
+              )}
             </View>
-          ))}
-        </View>
+
+            {/* Top Products */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Productos Más Vendidos</Text>
+              {salesData.topProducts.map((product, index) => (
+                <View key={index} style={styles.productItem}>
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName}>{product.name}</Text>
+                    <Text style={styles.productStats}>
+                      {product.quantity} unidades • ${product.revenue.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.rankBadge}>
+                    <Text style={styles.rankText}>{index + 1}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Daily Sales */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Ventas Diarias</Text>
+              {salesData.dailySales.map((day, index) => (
+                <View key={index} style={styles.dayItem}>
+                  <Text style={styles.dayDate}>{day.date}</Text>
+                  <View style={styles.dayStats}>
+                    <Text style={styles.daySales}>${day.sales.toFixed(2)}</Text>
+                    <Text style={styles.dayOrders}>{day.orders} pedidos</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -333,5 +481,29 @@ const styles = StyleSheet.create({
   dayOrders: {
     fontSize: 12,
     color: '#666',
+  },
+  refreshButton: {
+    padding: 8,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#795548',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

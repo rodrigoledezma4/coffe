@@ -17,7 +17,7 @@ interface Order {
   customerPhone: string;
   items: { name: string; quantity: number; price: number }[];
   total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'preparing' | 'entregado' | 'cancelled';
   date: string;
   address: string;
   paymentMethod: string;
@@ -68,7 +68,7 @@ export default function OrdersReportScreen() {
             { name: 'Cappuccino', quantity: 3, price: 15.00 },
           ],
           total: 45.00,
-          status: 'delivered',
+          status: 'entregado',
           date: '2024-01-15 12:15',
           address: 'Zona Sur #789',
           paymentMethod: 'WhatsApp',
@@ -90,25 +90,27 @@ export default function OrdersReportScreen() {
     loadOrders();
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return '#FF9800';
-      case 'confirmed': return '#2196F3';
-      case 'preparing': return '#9C27B0';
-      case 'delivered': return '#4CAF50';
-      case 'cancelled': return '#f44336';
-      default: return '#666';
-    }
-  };
-
   const getStatusText = (status: string) => {
     switch (status) {
       case 'pending': return 'Pendiente';
       case 'confirmed': return 'Confirmado';
       case 'preparing': return 'Preparando';
-      case 'delivered': return 'Entregado';
+      case 'entregado': return 'Entregado';
+      case 'delivered': return 'Entregado'; // Para compatibilidad
       case 'cancelled': return 'Cancelado';
       default: return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return '#FF9800';
+      case 'confirmed': return '#2196F3';
+      case 'preparing': return '#9C27B0';
+      case 'entregado': return '#4CAF50';
+      case 'delivered': return '#4CAF50'; // Para compatibilidad
+      case 'cancelled': return '#f44336';
+      default: return '#666';
     }
   };
 
@@ -155,7 +157,7 @@ export default function OrdersReportScreen() {
 
       {/* Filter Buttons */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-        {['all', 'pending', 'confirmed', 'preparing', 'delivered'].map(status => (
+        {['all', 'pending', 'confirmed', 'preparing', 'entregado'].map(status => (
           <TouchableOpacity
             key={status}
             style={[
@@ -233,7 +235,7 @@ export default function OrdersReportScreen() {
               {order.status === 'preparing' && (
                 <TouchableOpacity
                   style={styles.deliveredButton}
-                  onPress={() => updateOrderStatus(order.id, 'delivered')}
+                  onPress={() => updateOrderStatus(order.id, 'entregado')}
                 >
                   <Text style={styles.buttonText}>Entregado</Text>
                 </TouchableOpacity>
