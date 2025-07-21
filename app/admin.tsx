@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,7 @@ export default function AdminScreen() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
 
   // Load products from database
   const loadProducts = async (showLoading = true) => {
@@ -198,6 +200,16 @@ export default function AdminScreen() {
     Alert.alert('Éxito', 'Producto actualizado localmente');
   };
 
+  const handleOpenSalesReport = () => {
+    setDropdownVisible(false);
+    router.push('/salesReport');
+  };
+
+  const handleOpenOrdersReport = () => {
+    setDropdownVisible(false);
+    router.push('/ordersReport');
+  };
+
   // Debug para verificar el estado de productos
   useEffect(() => {
     console.log('🔍 Admin Products state changed:', products.length, products);
@@ -210,10 +222,43 @@ export default function AdminScreen() {
           <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
         <Text style={styles.title}>Panel de Administración</Text>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddNewProduct}>
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.reportsButton} 
+            onPress={() => setDropdownVisible(true)}
+          >
+            <Ionicons name="bar-chart" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addButton} onPress={handleAddNewProduct}>
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Dropdown Menu */}
+      <Modal
+        visible={dropdownVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDropdownVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          onPress={() => setDropdownVisible(false)}
+        >
+          <View style={styles.dropdownMenu}>
+            <TouchableOpacity style={styles.dropdownItem} onPress={handleOpenSalesReport}>
+              <Ionicons name="analytics" size={20} color="#795548" />
+              <Text style={styles.dropdownText}>Reportes de Ventas</Text>
+            </TouchableOpacity>
+            <View style={styles.dropdownSeparator} />
+            <TouchableOpacity style={styles.dropdownItem} onPress={handleOpenOrdersReport}>
+              <Ionicons name="receipt" size={20} color="#795548" />
+              <Text style={styles.dropdownText}>Pedidos</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <View style={styles.statsContainer}>
         <Text style={styles.statsText}>
@@ -340,6 +385,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  reportsButton: {
+    backgroundColor: '#2196F3',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -459,5 +516,39 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 2,
     fontFamily: 'monospace',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 80,
+    paddingRight: 16,
+  },
+  dropdownMenu: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    minWidth: 180,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dropdownText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  dropdownSeparator: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginHorizontal: 16,
   },
 });
