@@ -14,11 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../src/constants/Colors';
 import { CartItem } from '../src/types';
 import { whatsappService } from '../src/services/whatsappService';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function CheckoutScreen() {
   const params = useLocalSearchParams();
   const cartData = params.cart ? JSON.parse(params.cart as string) : [];
   const totalAmount = params.total ? parseFloat(params.total as string) : 0;
+  const { state } = useAuth();
 
   const [deliveryAddress, setDeliveryAddress] = useState({
     address: '',
@@ -31,6 +33,19 @@ export default function CheckoutScreen() {
   const handlePlaceOrder = async () => {
     if (!deliveryAddress.address.trim()) {
       Alert.alert('Error', 'Por favor, completa la dirección de entrega.');
+      return;
+    }
+
+    // Verificar si el usuario está autenticado
+    if (!state.isAuthenticated || !state.user) {
+      Alert.alert(
+        'Inicio de sesión requerido',
+        'Debes iniciar sesión para realizar un pedido.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Iniciar sesión', onPress: () => router.push('/') }
+        ]
+      );
       return;
     }
 
@@ -49,7 +64,8 @@ export default function CheckoutScreen() {
               cartItems: cartData,
               total: totalAmount,
               deliveryAddress,
-              paymentMethod
+              paymentMethod,
+              user: state.user
             };
 
             try {
@@ -116,6 +132,22 @@ export default function CheckoutScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Información del cliente */}
+        {state.isAuthenticated && state.user && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Información del Cliente</Text>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>
+                {state.user.name} {state.user.lastName || ''}
+              </Text>
+              <Text style={styles.userEmail}>{state.user.email}</Text>
+              {state.user.phone && (
+                <Text style={styles.userPhone}>{state.user.phone}</Text>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Resumen del pedido */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Resumen del Pedido</Text>
@@ -299,5 +331,27 @@ const styles = StyleSheet.create({
     color: Colors.light.icon,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  userInfo: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 16,
+    color: Colors.light.icon,
+    marginBottom: 2,
+  },
+  userPhone: {
+    fontSize: 16,
+    color: Colors.light.icon,
   },
 });

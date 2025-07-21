@@ -1,8 +1,8 @@
 import { Linking } from 'react-native';
-import { CartItem } from '../types';
+import { CartItem, User } from '../types';
 
-// Tu número de WhatsApp (reemplaza con tu número real)
-const WHATSAPP_NUMBER = '573001234567'; // Formato: código país + número sin espacios ni símbolos
+// Número de WhatsApp de la empresa (formato internacional sin +)
+const WHATSAPP_NUMBER = '59169403698'; // 591 (Bolivia) + 69403698 (tu número)
 
 interface OrderData {
   cartItems: CartItem[];
@@ -12,13 +12,29 @@ interface OrderData {
     additionalInfo: string;
   };
   paymentMethod: string;
+  user?: User | null;
 }
 
 export const whatsappService = {
   formatOrderMessage(orderData: OrderData): string {
-    const { cartItems, total, deliveryAddress, paymentMethod } = orderData;
+    const { cartItems, total, deliveryAddress, paymentMethod, user } = orderData;
     
     let message = '🛒 *NUEVO PEDIDO - CAFETERÍA*\n\n';
+    
+    // Información del cliente
+    if (user) {
+      message += '👤 *DATOS DEL CLIENTE:*\n';
+      message += `• Nombre: ${user.name}`;
+      if (user.lastName) {
+        message += ` ${user.lastName}`;
+      }
+      message += '\n';
+      message += `• Email: ${user.email}\n`;
+      if (user.phone) {
+        message += `• Teléfono: ${user.phone}\n`;
+      }
+      message += '\n';
+    }
     
     // Información del pedido
     message += '📋 *PRODUCTOS:*\n';
@@ -58,19 +74,26 @@ export const whatsappService = {
 
   async sendOrderToWhatsApp(orderData: OrderData): Promise<boolean> {
     try {
+      console.log('Iniciando envío a WhatsApp...');
       const message = this.formatOrderMessage(orderData);
       const encodedMessage = encodeURIComponent(message);
       const whatsappUrl = `whatsapp://send?phone=${WHATSAPP_NUMBER}&text=${encodedMessage}`;
       
+      console.log('URL de WhatsApp:', whatsappUrl);
+      
       // Verificar si WhatsApp está disponible
       const canOpen = await Linking.canOpenURL(whatsappUrl);
+      console.log('¿Puede abrir WhatsApp?:', canOpen);
       
       if (canOpen) {
+        console.log('Abriendo WhatsApp...');
         await Linking.openURL(whatsappUrl);
         return true;
       } else {
         // Si WhatsApp no está disponible, intentar con WhatsApp Web
+        console.log('WhatsApp no disponible, intentando con WhatsApp Web...');
         const webUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
+        console.log('URL de WhatsApp Web:', webUrl);
         await Linking.openURL(webUrl);
         return true;
       }
@@ -86,3 +109,4 @@ export const whatsappService = {
     return phoneRegex.test(phoneNumber.replace(/\D/g, ''));
   }
 };
+
