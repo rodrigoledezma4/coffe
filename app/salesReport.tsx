@@ -20,6 +20,7 @@ export default function SalesReportScreen() {
   const [salesData, setSalesData] = useState<SalesData | null>(null)
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState("7days") // 7days, 30days, 90days
+  const validStatuses = ["entregado", "delivered", "confirmado", "preparando", "listo"]
 
   const loadSalesData = async () => {
     if (!state.token) {
@@ -61,7 +62,7 @@ export default function SalesReportScreen() {
 
         // Filtrar solo pedidos entregados para calcular ventas
         const deliveredOrders = orders.filter(
-          (order: any) => order.status === "entregado" || order.status === "delivered",
+          (order: any) => validStatuses.includes(order.status?.toLowerCase())
         )
 
         console.log("✅ Delivered orders found:", deliveredOrders.length)
