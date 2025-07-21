@@ -1,175 +1,214 @@
-import React, { useState, useEffect } from 'react';
+"use client"
+
+import { Ionicons } from "@expo/vector-icons"
+import { router } from "expo-router"
+import React, { useEffect, useState } from "react"
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { orderService } from '../src/services/orderService';
-import { useAuth } from '../src/context/AuthContext';
-
-interface Order {
-  id: string;
-  customerName: string;
-  customerPhone: string;
-  items: { name: string; quantity: number; price: number }[];
-  total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'entregado' | 'delivered' | 'cancelled';
-  date: string;
-  address: string;
-  paymentMethod: string;
-}
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native"
+import { useAuth } from "../src/context/AuthContext"
+import { orderService, type Order } from "../src/services/orderService"
 
 export default function OrdersReportScreen() {
-  const { state } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const { state } = useAuth()
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    total: 0,
+  })
 
-  const loadOrders = async () => {
-    if (!state.token) {
-      Alert.alert('Error', 'No tienes autorización para ver los pedidos');
-      router.back();
-      return;
+  const loadOrders = async (showLoading = true, page = 1) => {
+    if (!state.isAuthenticated || !state.token) {
+      Alert.alert("Error", "Debes estar autenticado para ver los pedidos")
+      setLoading(false)
+      return
     }
 
-    setLoading(true);
-    try {
-      console.log('📋 Loading orders from API...');
-      
-      const result = await orderService.getAllOrdersForAdmin(state.token, {
-        limit: 1000
-      });
+    if (showLoading) setLoading(true)
 
-      if (result.success && result.data) {
-        console.log('📦 Raw orders response:', result.data);
-        
-        let ordersArray = [];
-        if (Array.isArray(result.data)) {
-          ordersArray = result.data;
-        } else if (result.data.orders && Array.isArray(result.data.orders)) {
-          ordersArray = result.data.orders;
-        } else if (result.data.pedidos && Array.isArray(result.data.pedidos)) {
-          ordersArray = result.data.pedidos;
+    try {
+      console.log("🔄 Loading orders from API...")
+      const params = {
+        page,
+        limit: 10,
+        ...(filterStatus !== "all" && { status: filterStatus }),
+      }
+
+      const response = await orderService.getOrders(state.token, params)
+
+      console.log("📡 Full API Response:", JSON.stringify(response, null, 2))
+
+      if (response.success && response.data) {
+        const { pedidos, totalPages, currentPage, total } = response.data
+
+        console.log("✅ Orders loaded successfully:", pedidos.length)
+        if (pedidos.length > 0) {
+          console.log("📋 Sample order:", JSON.stringify(pedidos[0], null, 2))
         }
 
-        console.log('📋 Orders array found:', ordersArray.length);
-
-        const formattedOrders: Order[] = ordersArray.map((order: any) => {
-          console.log('🔍 Processing order:', order);
-          
-          // Extraer información del usuario con múltiples formatos posibles
-          let customerName = 'Cliente Desconocido';
-          let customerPhone = 'Sin teléfono';
-          
-          if (order.usuarioId) {
-            customerName = order.usuarioId.nombreUsr || order.usuarioId.name || customerName;
-            customerPhone = order.usuarioId.celUsr || order.usuarioId.phone || customerPhone;
-          } else if (order.userId) {
-            customerName = order.userId.nombreUsr || order.userId.name || customerName;
-            customerPhone = order.userId.celUsr || order.userId.phone || customerPhone;
-          } else if (order.user) {
-            customerName = order.user.nombreUsr || order.user.name || customerName;
-            customerPhone = order.user.celUsr || order.user.phone || customerPhone;
-          }
-          
-          return {
-            id: order._id || order.id || 'unknown',
-            customerName,
-            customerPhone,
-            items: order.productos || order.items || [],
-            total: order.total || 0,
-            status: order.estado || order.status || 'pending',
-            date: new Date(order.fechaPedido || order.createdAt || order.fecha || Date.now()).toLocaleString('es-ES'),
-            address: order.direccionEntrega || order.deliveryAddress || order.address || 'Sin dirección',
-            paymentMethod: order.metodoPago || order.paymentMethod || 'No especificado',
-          };
-        });
-
-        console.log('✅ Formatted orders:', formattedOrders.length);
-        console.log('📊 Orders by status:', formattedOrders.reduce((acc, order) => {
-          acc[order.status] = (acc[order.status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>));
-        
-        setOrders(formattedOrders);
+        setOrders(pedidos)
+        setPagination({
+          currentPage: Number(currentPage),
+          totalPages: Number(totalPages),
+          total: Number(total),
+        })
       } else {
-        console.error('❌ Failed to load orders:', result.message);
-        Alert.alert('Error', result.message || 'No se pudieron cargar los pedidos');
-        setOrders([]);
+        console.log("❌ API response not successful:", response)
+        Alert.alert("Error", response.message || "No se pudieron cargar los pedidos")
+        setOrders([])
       }
     } catch (error) {
-      console.error('❌ Error loading orders:', error);
-      Alert.alert('Error', 'Error de conexión al cargar los pedidos');
-      setOrders([]);
+      console.error("❌ Error loading orders:", error)
+      Alert.alert("Error", "Error de conexión al cargar los pedidos")
+      setOrders([])
     } finally {
-      setLoading(false);
+      setLoading(false)
+      setRefreshing(false)
     }
-  };
+  }
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    loadOrders()
+  }, [state.isAuthenticated, state.token, filterStatus])
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pendiente';
-      case 'confirmed': return 'Confirmado';
-      case 'preparing': return 'Preparando';
-      case 'entregado': return 'Entregado';
-      case 'delivered': return 'Entregado';
-      case 'cancelled': return 'Cancelado';
-      default: return status;
-    }
-  };
+  const onRefresh = () => {
+    setRefreshing(true)
+    loadOrders(false, 1)
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#FF9800';
-      case 'confirmed': return '#2196F3';
-      case 'preparing': return '#9C27B0';
-      case 'entregado': return '#4CAF50';
-      case 'delivered': return '#4CAF50';
-      case 'cancelled': return '#f44336';
-      default: return '#666';
+      case "pendiente":
+        return "#FF9800"
+      case "confirmado":
+        return "#2196F3"
+      case "preparando":
+        return "#9C27B0"
+      case "listo":
+        return "#4CAF50"
+      case "entregado":
+        return "#4CAF50"
+      case "cancelado":
+        return "#f44336"
+      default:
+        return "#666"
     }
-  };
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "pendiente":
+        return "Pendiente"
+      case "confirmado":
+        return "Confirmado"
+      case "preparando":
+        return "Preparando"
+      case "listo":
+        return "Listo"
+      case "entregado":
+        return "Entregado"
+      case "cancelado":
+        return "Cancelado"
+      default:
+        return status
+    }
+  }
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     if (!state.token) {
-      Alert.alert('Error', 'No tienes autorización');
-      return;
+      Alert.alert("Error", "No tienes autorización para actualizar pedidos")
+      return
     }
 
     try {
-      const result = await orderService.updateOrderStatus(orderId, newStatus, state.token);
-      
-      if (result.success) {
-        setOrders(prev => 
-          prev.map(order => 
-            order.id === orderId 
-              ? { ...order, status: newStatus as any }
-              : order
-          )
-        );
-        Alert.alert('Éxito', 'Estado del pedido actualizado');
+      console.log("🔄 Updating order status:", orderId, newStatus)
+      const response = await orderService.updateOrderStatus(orderId, newStatus, state.token)
+
+      if (response.success) {
+        Alert.alert("Éxito", "Estado del pedido actualizado")
+        await loadOrders(false, pagination.currentPage) // Recargar pedidos
       } else {
-        Alert.alert('Error', result.message || 'No se pudo actualizar el estado');
+        Alert.alert("Error", response.message || "No se pudo actualizar el estado")
       }
     } catch (error) {
-      console.error('❌ Error updating order status:', error);
-      Alert.alert('Error', 'Error de conexión');
+      console.error("❌ Error updating order status:", error)
+      Alert.alert("Error", "Error de conexión al actualizar el estado")
     }
-  };
+  }
 
-  const filteredOrders = filterStatus === 'all' 
-    ? orders 
-    : orders.filter(order => order.status === filterStatus);
+  const cancelOrder = async (orderId: string) => {
+    if (!state.token) {
+      Alert.alert("Error", "No tienes autorización para cancelar pedidos")
+      return
+    }
+
+    Alert.alert("Confirmar Cancelación", "¿Estás seguro de que quieres cancelar este pedido?", [
+      { text: "No", style: "cancel" },
+      {
+        text: "Sí, Cancelar",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const response = await orderService.cancelOrder(orderId, state.token!)
+
+            if (response.success) {
+              Alert.alert("Éxito", "Pedido cancelado correctamente")
+              await loadOrders(false, pagination.currentPage)
+            } else {
+              Alert.alert("Error", response.message || "No se pudo cancelar el pedido")
+            }
+          } catch (error) {
+            console.error("❌ Error cancelling order:", error)
+            Alert.alert("Error", "Error de conexión al cancelar el pedido")
+          }
+        },
+      },
+    ])
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString("es-ES", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    } catch (error) {
+      return dateString
+    }
+  }
+
+  if (!state.isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={28} color="#222" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Pedidos</Text>
+        </View>
+        <View style={styles.notAuthContainer}>
+          <Ionicons name="lock-closed-outline" size={64} color="#ccc" />
+          <Text style={styles.notAuthText}>Debes iniciar sesión para ver los pedidos</Text>
+        </View>
+      </View>
+    )
+  }
 
   if (loading) {
     return (
@@ -185,7 +224,7 @@ export default function OrdersReportScreen() {
           <Text style={styles.loadingText}>Cargando pedidos...</Text>
         </View>
       </View>
-    );
+    )
   }
 
   return (
@@ -194,153 +233,201 @@ export default function OrdersReportScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={28} color="#222" />
         </TouchableOpacity>
-        <Text style={styles.title}>Pedidos ({filteredOrders.length})</Text>
-        <TouchableOpacity onPress={loadOrders} style={styles.refreshButton}>
+        <Text style={styles.title}>Pedidos ({orders.length})</Text>
+        <TouchableOpacity onPress={() => loadOrders(true, pagination.currentPage)} style={styles.refreshButton}>
           <Ionicons name="refresh" size={24} color="#795548" />
         </TouchableOpacity>
       </View>
 
       {/* Filter Buttons */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-        {['all', 'pending', 'confirmed', 'preparing', 'entregado', 'delivered', 'cancelled'].map(status => (
+        {["all", "pendiente", "confirmado", "preparando", "listo", "entregado", "cancelado"].map((status) => (
           <TouchableOpacity
             key={status}
-            style={[
-              styles.filterButton,
-              filterStatus === status && styles.activeFilterButton
-            ]}
+            style={[styles.filterButton, filterStatus === status && styles.activeFilterButton]}
             onPress={() => setFilterStatus(status)}
           >
-            <Text style={[
-              styles.filterButtonText,
-              filterStatus === status && styles.activeFilterButtonText
-            ]}>
-              {status === 'all' ? 'Todos' : getStatusText(status)}
+            <Text style={[styles.filterButtonText, filterStatus === status && styles.activeFilterButtonText]}>
+              {status === "all" ? "Todos" : getStatusText(status)}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#795548" />
-          <Text style={styles.loadingText}>Cargando pedidos reales...</Text>
+      {/* Pagination Info */}
+      {pagination.total > 0 && (
+        <View style={styles.paginationInfo}>
+          <Text style={styles.paginationText}>
+            Página {pagination.currentPage} de {pagination.totalPages} • Total: {pagination.total} pedidos
+          </Text>
         </View>
-      ) : (
-        <ScrollView style={styles.content}>
-          {filteredOrders.map((order) => (
-            <View key={order.id} style={styles.orderCard}>
-              <View style={styles.orderHeader}>
-                <Text style={styles.orderId}>Pedido #{order.id}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
-                  <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
-                </View>
-              </View>
-
-              <View style={styles.customerInfo}>
-                <Text style={styles.customerName}>{order.customerName}</Text>
-                <Text style={styles.customerPhone}>{order.customerPhone}</Text>
-                <Text style={styles.orderDate}>{order.date}</Text>
-              </View>
-
-              <View style={styles.orderItems}>
-                {order.items.map((item, index) => (
-                  <Text key={index} style={styles.orderItem}>
-                    {item.quantity}x {item.name} - ${(item.price * item.quantity).toFixed(2)}
-                  </Text>
-                ))}
-              </View>
-
-              <View style={styles.orderFooter}>
-                <View>
-                  <Text style={styles.orderTotal}>Total: ${order.total.toFixed(2)}</Text>
-                  <Text style={styles.paymentMethod}>{order.paymentMethod}</Text>
-                </View>
-                
-                {order.status === 'pending' && (
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                      style={styles.confirmButton}
-                      onPress={() => updateOrderStatus(order.id, 'confirmed')}
-                    >
-                      <Text style={styles.buttonText}>Confirmar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.cancelButton}
-                      onPress={() => updateOrderStatus(order.id, 'cancelled')}
-                    >
-                      <Text style={styles.buttonText}>Cancelar</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                
-                {order.status === 'confirmed' && (
-                  <TouchableOpacity
-                    style={styles.preparingButton}
-                    onPress={() => updateOrderStatus(order.id, 'preparing')}
-                  >
-                    <Text style={styles.buttonText}>Preparando</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {order.status === 'preparing' && (
-                  <TouchableOpacity
-                    style={styles.deliveredButton}
-                    onPress={() => updateOrderStatus(order.id, 'entregado')}
-                  >
-                    <Text style={styles.buttonText}>Entregado</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <Text style={styles.orderAddress}>📍 {order.address}</Text>
-            </View>
-          ))}
-
-          {filteredOrders.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="receipt-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>
-                No hay pedidos {filterStatus !== 'all' ? `con estado "${getStatusText(filterStatus)}"` : ''}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
       )}
+
+      <ScrollView
+        style={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {orders.map((order) => (
+          <View key={order._id} style={styles.orderCard}>
+            <View style={styles.orderHeader}>
+              <Text style={styles.orderId}>Pedido #{order._id.slice(-6)}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
+                <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.customerInfo}>
+              <Text style={styles.customerName}>{order.userId?.nombreUsr || "Cliente"}</Text>
+              {order.userId?.emailUsr && <Text style={styles.customerPhone}>{order.userId.emailUsr}</Text>}
+              {order.userId?.celUsr && <Text style={styles.customerPhone}>{order.userId.celUsr}</Text>}
+              <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
+            </View>
+
+            <View style={styles.orderItems}>
+              <Text style={styles.itemsTitle}>Productos:</Text>
+              {order.productos && order.productos.length > 0 ? (
+                order.productos.map((item, index) => (
+                  <View key={index} style={styles.orderItemRow}>
+                    {item.productoId?.imagen && (
+                      <Image
+                        source={{ uri: item.productoId.imagen }}
+                        style={styles.itemImage}
+                        onError={() => console.log("Error loading image:", item.productoId?.imagen)}
+                      />
+                    )}
+                    <View style={styles.itemDetails}>
+                      <Text style={styles.orderItem}>
+                        {item.cantidad}x {item.productoId?.nomProd || "Producto"}
+                      </Text>
+                      <Text style={styles.itemPrice}>${(item.precio * item.cantidad).toFixed(2)}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noItems}>No hay productos en este pedido</Text>
+              )}
+            </View>
+
+            <View style={styles.orderFooter}>
+              <View>
+                <Text style={styles.orderTotal}>Total: ${order.total.toFixed(2)}</Text>
+              </View>
+
+              {/* Action Buttons */}
+              {state.user?.role === "admin" && (
+                <View style={styles.actionButtons}>
+                  {order.status === "pendiente" && (
+                    <>
+                      <TouchableOpacity
+                        style={styles.confirmButton}
+                        onPress={() => updateOrderStatus(order._id, "confirmado")}
+                      >
+                        <Text style={styles.buttonText}>Confirmar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.cancelButton} onPress={() => cancelOrder(order._id)}>
+                        <Text style={styles.buttonText}>Cancelar</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+
+                  {order.status === "confirmado" && (
+                    <TouchableOpacity
+                      style={styles.preparingButton}
+                      onPress={() => updateOrderStatus(order._id, "preparando")}
+                    >
+                      <Text style={styles.buttonText}>Preparando</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {order.status === "preparando" && (
+                    <TouchableOpacity style={styles.readyButton} onPress={() => updateOrderStatus(order._id, "listo")}>
+                      <Text style={styles.buttonText}>Listo</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {order.status === "listo" && (
+                    <TouchableOpacity
+                      style={styles.deliveredButton}
+                      onPress={() => updateOrderStatus(order._id, "entregado")}
+                    >
+                      <Text style={styles.buttonText}>Entregado</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+        ))}
+
+        {orders.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyText}>
+              No hay pedidos {filterStatus !== "all" ? `con estado "${getStatusText(filterStatus)}"` : ""}
+            </Text>
+            <TouchableOpacity onPress={() => loadOrders(true, 1)} style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Recargar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Load More Button */}
+        {pagination.currentPage < pagination.totalPages && (
+          <TouchableOpacity style={styles.loadMoreButton} onPress={() => loadOrders(true, pagination.currentPage + 1)}>
+            <Text style={styles.loadMoreText}>Cargar más pedidos</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingTop: 48,
     paddingHorizontal: 16,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 16,
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#222',
-    marginLeft: 16,
+    fontWeight: "bold",
+    color: "#222",
+    flex: 1,
+    textAlign: "center",
+  },
+  refreshButton: {
+    padding: 4,
   },
   content: {
     flex: 1,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: "#666",
+  },
+  notAuthContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notAuthText: {
+    fontSize: 16,
+    color: "#666",
+    marginTop: 16,
+    textAlign: "center",
   },
   filterContainer: {
     marginBottom: 16,
@@ -350,37 +437,46 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 8,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   activeFilterButton: {
-    backgroundColor: '#795548',
+    backgroundColor: "#795548",
   },
   filterButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   activeFilterButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  paginationInfo: {
+    paddingHorizontal: 4,
+    marginBottom: 12,
+  },
+  paginationText: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
   },
   orderCard: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: "#f8f8f8",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#795548',
+    borderLeftColor: "#795548",
   },
   orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   orderId: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -388,100 +484,150 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   customerInfo: {
     marginBottom: 12,
   },
   customerName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
   customerPhone: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   orderDate: {
     fontSize: 12,
-    color: '#888',
+    color: "#888",
     marginTop: 2,
   },
   orderItems: {
     marginBottom: 12,
   },
+  itemsTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 8,
+  },
+  orderItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  itemImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    marginRight: 12,
+    backgroundColor: "#f0f0f0",
+  },
+  itemDetails: {
+    flex: 1,
+  },
   orderItem: {
     fontSize: 14,
-    color: '#555',
-    marginBottom: 2,
+    color: "#555",
+    fontWeight: "500",
+  },
+  itemPrice: {
+    fontSize: 14,
+    color: "#795548",
+    fontWeight: "bold",
+    marginTop: 2,
+  },
+  noItems: {
+    fontSize: 14,
+    color: "#999",
+    fontStyle: "italic",
   },
   orderFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   orderTotal: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  paymentMethod: {
-    fontSize: 12,
-    color: '#666',
+    fontWeight: "bold",
+    color: "#4CAF50",
   },
   actionButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   confirmButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   cancelButton: {
-    backgroundColor: '#f44336',
+    backgroundColor: "#f44336",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   preparingButton: {
-    backgroundColor: '#9C27B0',
+    backgroundColor: "#9C27B0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  readyButton: {
+    backgroundColor: "#FF9800",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   deliveredButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: 'bold',
-  },
-  orderAddress: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
+    fontWeight: "bold",
   },
   emptyContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 40,
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginTop: 16,
-    textAlign: 'center',
+    textAlign: "center",
+    marginBottom: 20,
   },
-  refreshButton: {
-    padding: 8,
+  retryButton: {
+    backgroundColor: "#795548",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
-});
+  retryButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  loadMoreButton: {
+    backgroundColor: "#795548",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    marginVertical: 16,
+  },
+  loadMoreText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+})
