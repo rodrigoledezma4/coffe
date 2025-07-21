@@ -1,111 +1,151 @@
-import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
-import {
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { Colors } from '../src/constants/Colors';
-import { useAuth } from '../src/context/AuthContext';
-import { whatsappService } from '../src/services/whatsappService';
-import { CartItem } from '../src/types';
+"use client"
+
+import { Ionicons } from "@expo/vector-icons"
+import { router, useLocalSearchParams } from "expo-router"
+import React, { useState } from "react"
+import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { Colors } from "../src/constants/Colors"
+import { useAuth } from "../src/context/AuthContext"
+import { orderService } from "../src/services/orderService"
+import { whatsappService } from "../src/services/whatsappService"
+import type { CartItem } from "../src/types"
 
 export default function CheckoutScreen() {
-  const params = useLocalSearchParams();
-  const cartData = params.cart ? JSON.parse(params.cart as string) : [];
-  const totalAmount = params.total ? parseFloat(params.total as string) : 0;
-  const { state } = useAuth();
+  const params = useLocalSearchParams()
+  const cartData = params.cart ? JSON.parse(params.cart as string) : []
+  const totalAmount = params.total ? Number.parseFloat(params.total as string) : 0
+  const { state } = useAuth()
 
   const [deliveryAddress, setDeliveryAddress] = useState({
-    address: '',
-    additionalInfo: '',
-  });
-  
-  const [paymentMethod] = useState('whatsapp'); // Agregar esta línea
-  const [orderPlaced, setOrderPlaced] = useState(false);
+    address: "",
+    additionalInfo: "",
+  })
+
+  const [paymentMethod] = useState("whatsapp") // Agregar esta línea
+  const [orderPlaced, setOrderPlaced] = useState(false)
 
   const handlePlaceOrder = async () => {
     if (!deliveryAddress.address.trim()) {
-      Alert.alert('Error', 'Por favor, completa la dirección de entrega.');
-      return;
+      Alert.alert("Error", "Por favor, completa la dirección de entrega.")
+      return
     }
 
     // Verificar si el usuario está autenticado
-    if (!state.isAuthenticated || !state.user) {
-      Alert.alert(
-        'Inicio de sesión requerido',
-        'Debes iniciar sesión para realizar un pedido.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Iniciar sesión', onPress: () => router.push('/') }
-        ]
-      );
-      return;
+    if (!state.isAuthenticated || !state.user || !state.token) {
+      Alert.alert("Inicio de sesión requerido", "Debes iniciar sesión para realizar un pedido.", [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Iniciar sesión", onPress: () => router.push("/") },
+      ])
+      return
     }
 
-    Alert.alert(
-      'Confirmar Pedido',
-      '¿Estás seguro de que quieres realizar este pedido?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            setOrderPlaced(true);
-            
-            // Preparar datos del pedido para WhatsApp
-            const orderData = {
-              cartItems: cartData,
-              total: totalAmount,
-              deliveryAddress,
-              paymentMethod,
-              user: state.user
-            };
+    Alert.alert("Confirmar Pedido", "¿Estás seguro de que quieres realizar este pedido?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Confirmar",
+        onPress: async () => {
+          setOrderPlaced(true)
 
-            try {
-              // Enviar pedido por WhatsApp
-              const sentToWhatsApp = await whatsappService.sendOrderToWhatsApp(orderData);
-              
+          try {
+            // 1. Crear el pedido en la base de datos primero
+            console.log("🔄 Creating order in database...")
+
+            // Preparar datos del pedido para la API
+            const orderRequest = {
+              productos: cartData.map((item: CartItem) => ({
+                productoId: item.id,
+                cantidad: item.quantity,
+              })),
+            }
+
+            console.log("📤 Order request data:", JSON.stringify(orderRequest, null, 2))
+
+            // Llamar al servicio para crear el pedido
+            const orderResponse = await orderService.createOrder(orderRequest, state.token!)
+
+            console.log("📡 Order creation response:", orderResponse)
+
+            if (orderResponse.success) {
+              console.log("✅ Order created successfully in database")
+
+              // 2. Preparar datos del pedido para WhatsApp
+              const orderData = {
+                cartItems: cartData,
+                total: totalAmount,
+                deliveryAddress,
+                paymentMethod,
+                user: state.user,
+                orderId: orderResponse.data?.pedidos?.[0]?._id || "N/A", // Incluir ID del pedido creado
+              }
+
+              // 3. Enviar pedido por WhatsApp
+              const sentToWhatsApp = await whatsappService.sendOrderToWhatsApp(orderData)
+
               if (sentToWhatsApp) {
                 setTimeout(() => {
                   Alert.alert(
-                    'Pedido Enviado',
-                    'Tu pedido ha sido enviado por WhatsApp. Recibirás confirmación del comercio pronto.',
+                    "Pedido Creado y Enviado",
+                    "Tu pedido ha sido registrado en la base de datos y enviado por WhatsApp. Recibirás confirmación del comercio pronto.",
                     [
                       {
-                        text: 'OK',
-                        onPress: () => router.replace('/'),
-                      }
-                    ]
-                  );
-                }, 2000);
+                        text: "OK",
+                        onPress: () => router.replace("/"),
+                      },
+                    ],
+                  )
+                }, 2000)
               } else {
-                throw new Error('No se pudo enviar por WhatsApp');
+                // Si falla WhatsApp pero el pedido ya está creado
+                setTimeout(() => {
+                  Alert.alert(
+                    "Pedido Creado",
+                    "Tu pedido ha sido registrado exitosamente en la base de datos. Por favor, contacta directamente al +591 72284092 para confirmar tu pedido.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => router.replace("/"),
+                      },
+                    ],
+                  )
+                }, 2000)
               }
-            } catch (error) {
-              console.error('Error enviando pedido:', error);
+            } else {
+              // Error al crear el pedido en la base de datos
+              console.error("❌ Failed to create order in database:", orderResponse.message)
+
               Alert.alert(
-                'Error al Enviar',
-                'No se pudo enviar el pedido por WhatsApp. Por favor, contacta directamente al +57 300 123 4567',
+                "Error al Crear Pedido",
+                `No se pudo registrar el pedido en la base de datos: ${orderResponse.message}`,
                 [
                   {
-                    text: 'OK',
-                    onPress: () => router.replace('/'),
-                  }
-                ]
-              );
+                    text: "OK",
+                    onPress: () => {
+                      setOrderPlaced(false)
+                    },
+                  },
+                ],
+              )
             }
-          },
+          } catch (error) {
+            console.error("❌ Error creating order:", error)
+
+            Alert.alert(
+              "Error de Conexión",
+              "No se pudo conectar con el servidor para crear el pedido. Verifica tu conexión a internet.",
+              [
+                {
+                  text: "OK",
+                  onPress: () => {
+                    setOrderPlaced(false)
+                  },
+                },
+              ],
+            )
+          }
         },
-      ]
-    );
-  };
+      },
+    ])
+  }
 
   if (orderPlaced) {
     return (
@@ -118,7 +158,7 @@ export default function CheckoutScreen() {
           </Text>
         </View>
       </View>
-    );
+    )
   }
 
   return (
@@ -138,12 +178,10 @@ export default function CheckoutScreen() {
             <Text style={styles.sectionTitle}>Información del Cliente</Text>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>
-                {state.user.name} {state.user.lastName || ''}
+                {state.user.name} {state.user.lastName || ""}
               </Text>
               <Text style={styles.userEmail}>{state.user.email}</Text>
-              {state.user.phone && (
-                <Text style={styles.userPhone}>{state.user.phone}</Text>
-              )}
+              {state.user.phone && <Text style={styles.userPhone}>{state.user.phone}</Text>}
             </View>
           </View>
         )}
@@ -156,7 +194,9 @@ export default function CheckoutScreen() {
               <Image source={{ uri: item.image }} style={styles.itemImage} />
               <View style={styles.itemDetails}>
                 <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemInfo}>{item.pack} • Cantidad: {item.quantity}</Text>
+                <Text style={styles.itemInfo}>
+                  {item.pack} • Cantidad: {item.quantity}
+                </Text>
                 <Text style={styles.itemPrice}>Bs{(item.price * item.quantity).toFixed(2)}</Text>
               </View>
             </View>
@@ -174,7 +214,7 @@ export default function CheckoutScreen() {
             style={styles.input}
             placeholder="Dirección completa de entrega"
             value={deliveryAddress.address}
-            onChangeText={(text) => setDeliveryAddress({...deliveryAddress, address: text})}
+            onChangeText={(text) => setDeliveryAddress({ ...deliveryAddress, address: text })}
             multiline
             numberOfLines={2}
           />
@@ -182,7 +222,7 @@ export default function CheckoutScreen() {
             style={[styles.input, styles.textArea]}
             placeholder="Información adicional (opcional)"
             value={deliveryAddress.additionalInfo}
-            onChangeText={(text) => setDeliveryAddress({...deliveryAddress, additionalInfo: text})}
+            onChangeText={(text) => setDeliveryAddress({ ...deliveryAddress, additionalInfo: text })}
             multiline
             numberOfLines={3}
           />
@@ -195,7 +235,7 @@ export default function CheckoutScreen() {
         </TouchableOpacity>
       </View>
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -205,15 +245,15 @@ const styles = StyleSheet.create({
     paddingTop: 48,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     marginBottom: 20,
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.light.text,
   },
   content: {
@@ -225,13 +265,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.light.text,
     marginBottom: 16,
   },
   orderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
     padding: 12,
     backgroundColor: Colors.light.surface,
@@ -248,7 +288,7 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.light.text,
   },
   itemInfo: {
@@ -258,32 +298,32 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.light.primary,
     marginTop: 4,
   },
   totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
   },
   totalLabel: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.light.text,
   },
   totalAmount: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.light.primary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -291,7 +331,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.surface,
     marginBottom: 12,
     color: Colors.light.text,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   textArea: {
     height: 80,
@@ -300,36 +340,36 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: Colors.light.background,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
   },
   placeOrderButton: {
     backgroundColor: Colors.light.primary,
     borderRadius: 16,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   placeOrderText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   successContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 32,
   },
   successTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4CAF50',
+    fontWeight: "bold",
+    color: "#4CAF50",
     marginTop: 16,
     marginBottom: 8,
   },
   successText: {
     fontSize: 16,
     color: Colors.light.icon,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 24,
   },
   userInfo: {
@@ -337,11 +377,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: "#eee",
   },
   userName: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: Colors.light.text,
     marginBottom: 4,
   },
@@ -354,4 +394,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.light.icon,
   },
-});
+})
