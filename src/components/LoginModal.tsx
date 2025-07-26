@@ -99,7 +99,7 @@ export function LoginModal({ visible, onClose, onNavigateToRegister }: LoginModa
               <TouchableOpacity onPress={handleClose}>
                 <Ionicons name="close" size={28} color="#222" />
               </TouchableOpacity>
-              <Text style={styles.title}>Iniciar Sesión</Text>
+              <Text style={styles.title}>Iniciar Sesión.</Text>
               <View style={{ width: 28 }} /> {/* Espacio para alinear el ícono */}
             </View>
 
@@ -144,9 +144,6 @@ export function LoginModal({ visible, onClose, onNavigateToRegister }: LoginModa
                 <Text style={styles.registerLinkText}>¿No tienes cuenta? Regístrate aquí</Text>
               </TouchableOpacity>
 
-              <View style={styles.adminHint}>
-                <Text style={styles.adminHintText}>Admin: admin@gmail.com / admin123</Text>
-              </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -239,15 +236,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textDecorationLine: "underline",
   },
-  adminHint: {
-    marginTop: 20,
-    padding: 12,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-  },
-  adminHintText: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-  },
 })
+    

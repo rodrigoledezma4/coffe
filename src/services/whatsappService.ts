@@ -2,7 +2,7 @@ import { Linking } from "react-native"
 import type { CartItem, User } from "../types"
 
 // Número de WhatsApp de la empresa (formato internacional sin +)
-const WHATSAPP_NUMBER = "59172284092" // 591 (Bolivia) + 72284092 (tu número)
+const WHATSAPP_NUMBER = "59177491244" // 591 (Bolivia) + 72284092 (tu número)
 
 interface OrderData {
   cartItems: CartItem[]

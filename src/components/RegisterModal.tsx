@@ -62,7 +62,7 @@ export function RegisterModal({ visible, onClose, onNavigateToLogin }: RegisterM
       return;
     }
 
-    if (phone.length < 10) {
+    if (phone.length < 8) {
       Alert.alert('Error', 'Por favor, ingresa un número de teléfono válido');
       return;
     }
@@ -208,11 +208,11 @@ export function RegisterModal({ visible, onClose, onNavigateToLogin }: RegisterM
                 <Text style={styles.label}>Teléfono</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="3001234567"
+                  placeholder="61234567"
                   value={phone}
                   onChangeText={setPhone}
                   keyboardType="phone-pad"
-                  maxLength={10}
+                  maxLength={8}
                   editable={!loading}
                 />
               </View>
@@ -371,5 +371,5 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
-    
+
 
