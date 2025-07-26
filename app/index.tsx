@@ -253,7 +253,7 @@ export default function HomeScreen() {
         />
       </TouchableOpacity>
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>☕Amber Infusion</Text>
+        <Text style={styles.title}>Amber Infusion</Text>
         {/* Iconos de redes sociales */}
         <View style={styles.socialMediaContainer}>
           <TouchableOpacity

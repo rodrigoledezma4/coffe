@@ -122,13 +122,14 @@ export function LoginModal({ visible, onClose, onNavigateToRegister }: LoginModa
                 <Text style={styles.label}>Contraseña</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="••••••••"
+                  placeholder="Contraseña"
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={true}
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!loading}
+                  textContentType="password"
                 />
               </View>
 
@@ -210,6 +211,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#f8f8f8",
     minHeight: 48,
+    color: "#333",
   },
   loginButton: {
     backgroundColor: "#795548",
@@ -237,4 +239,4 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 })
-    
+

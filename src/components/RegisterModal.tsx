@@ -238,10 +238,11 @@ export function RegisterModal({ visible, onClose, onNavigateToLogin }: RegisterM
                   placeholder="Mínimo 6 caracteres"
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={true}
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!loading}
+                  textContentType="password"
                 />
               </View>
 
@@ -252,10 +253,11 @@ export function RegisterModal({ visible, onClose, onNavigateToLogin }: RegisterM
                   placeholder="Confirma tu contraseña"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  secureTextEntry
+                  secureTextEntry={true}
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!loading}
+                  textContentType="password"
                 />
               </View>
 
@@ -343,6 +345,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f8f8f8',
     height: 48,
+    color: '#333',
   },
   registerButton: {
     backgroundColor: '#795548',
