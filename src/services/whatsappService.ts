@@ -7,18 +7,20 @@ const WHATSAPP_NUMBER = "59177491244" // 591 (Bolivia) + 72284092 (tu número)
 interface OrderData {
   cartItems: CartItem[]
   total: number
-  deliveryAddress: {
-    address: string
-    additionalInfo: string
+  deliveryLocation: {
+    latitude: number
+    longitude: number
+    address?: string
   }
+  deliveryAddress?: string // Additional info
   paymentMethod: string
   user?: User | null
-  orderId?: string // Add order ID from database
+  orderId?: string
 }
 
 export const whatsappService = {
   formatOrderMessage(orderData: OrderData): string {
-    const { cartItems, total, deliveryAddress, paymentMethod, user, orderId } = orderData
+    const { cartItems, total, deliveryLocation, deliveryAddress, paymentMethod, user, orderId } = orderData
 
     let message = "🛒 *NUEVO PEDIDO -AMBER INFUSIÓN*\n\n"
 
@@ -55,11 +57,16 @@ export const whatsappService = {
     // Total
     message += `💰 *TOTAL: Bs${total.toFixed(2)}*\n\n`
 
-    // Dirección de entrega
-    message += "📍 *DIRECCIÓN DE ENTREGA:*\n"
-    message += `${deliveryAddress.address}\n`
-    if (deliveryAddress.additionalInfo.trim()) {
-      message += `Información adicional: ${deliveryAddress.additionalInfo}\n`
+    // Ubicación de entrega
+    message += "📍 *UBICACIÓN DE ENTREGA:*\n"
+    if (deliveryLocation.address) {
+      message += `📍 Dirección: ${deliveryLocation.address}\n`
+    }
+    message += `🗺️ Coordenadas: ${deliveryLocation.latitude.toFixed(6)}, ${deliveryLocation.longitude.toFixed(6)}\n`
+    message += `🔗 Ver en Google Maps: https://maps.google.com/?q=${deliveryLocation.latitude},${deliveryLocation.longitude}\n`
+
+    if (deliveryAddress && deliveryAddress.trim()) {
+      message += `ℹ️ Información adicional: ${deliveryAddress}\n`
     }
     message += "\n"
 

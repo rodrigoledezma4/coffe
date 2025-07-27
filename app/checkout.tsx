@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { router, useLocalSearchParams } from "expo-router"
 import React, { useState } from "react"
 import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { MapLocationPicker } from "../src/components/MapLocationPicker"
 import { Colors } from "../src/constants/Colors"
 import { useAuth } from "../src/context/AuthContext"
 import { orderService } from "../src/services/orderService"
@@ -16,6 +17,12 @@ export default function CheckoutScreen() {
   const totalAmount = params.total ? Number.parseFloat(params.total as string) : 0
   const { state } = useAuth()
 
+  const [deliveryLocation, setDeliveryLocation] = useState<{
+    latitude: number
+    longitude: number
+    address?: string
+  } | null>(null)
+
   const [deliveryAddress, setDeliveryAddress] = useState({
     address: "",
     additionalInfo: "",
@@ -25,8 +32,8 @@ export default function CheckoutScreen() {
   const [orderPlaced, setOrderPlaced] = useState(false)
 
   const handlePlaceOrder = async () => {
-    if (!deliveryAddress.address.trim()) {
-      Alert.alert("Error", "Por favor, completa la dirección de entrega.")
+    if (!deliveryLocation) {
+      Alert.alert("Error", "Por favor, selecciona una ubicación de entrega en el mapa.")
       return
     }
 
@@ -72,10 +79,11 @@ export default function CheckoutScreen() {
               const orderData = {
                 cartItems: cartData,
                 total: totalAmount,
-                deliveryAddress,
+                deliveryLocation, // Changed from deliveryAddress
+                deliveryAddress: deliveryAddress.additionalInfo, // Keep additional info
                 paymentMethod,
                 user: state.user,
-                orderId: orderResponse.data?.pedidos?.[0]?._id || "N/A", // Incluir ID del pedido creado
+                orderId: orderResponse.data?.pedidos?.[0]?._id || "N/A",
               }
 
               // 3. Enviar pedido por WhatsApp
@@ -207,16 +215,15 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {/* Dirección de entrega */}
+        {/* Ubicación de entrega */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dirección de Entrega</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Dirección completa de entrega"
-            value={deliveryAddress.address}
-            onChangeText={(text) => setDeliveryAddress({ ...deliveryAddress, address: text })}
-            multiline
-            numberOfLines={2}
+          <Text style={styles.sectionTitle}>Ubicación de Entrega</Text>
+          <MapLocationPicker
+            onLocationSelect={(location) => {
+              console.log("📍 Location selected:", location)
+              setDeliveryLocation(location)
+            }}
+            initialLocation={deliveryLocation ?? undefined}
           />
           <TextInput
             style={[styles.input, styles.textArea]}
