@@ -1,11 +1,10 @@
 import React from 'react';
 import {
-  View,
   ActivityIndicator,
-  Text,
-  StyleSheet,
   Modal,
-  Dimensions,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 

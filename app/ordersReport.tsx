@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
+import { OrderDetailsModal } from "../src/components/OrderDetailModal"; // Import the new modal
 import { useAuth } from "../src/context/AuthContext"
 import { orderService, type Order } from "../src/services/orderService"
 
@@ -28,6 +29,9 @@ export default function OrdersReportScreen() {
     totalPages: 1,
     total: 0,
   })
+  const [isDetailsModalVisible, setIsDetailsModalVisible] = useState(false) // State for modal visibility
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null) // State for selected order
+  const [loadingUpdate, setLoadingUpdate] = useState(false) // State for loading during status update
 
   const loadOrders = async (showLoading = true, page = 1) => {
     if (!state.isAuthenticated || !state.token) {
@@ -131,7 +135,7 @@ export default function OrdersReportScreen() {
       Alert.alert("Error", "No tienes autorización para actualizar pedidos")
       return
     }
-
+    setLoadingUpdate(true)
     try {
       console.log("🔄 Updating order status:", orderId, newStatus)
       const response = await orderService.updateOrderStatus(orderId, newStatus, state.token)
@@ -139,12 +143,16 @@ export default function OrdersReportScreen() {
       if (response.success) {
         Alert.alert("Éxito", "Estado del pedido actualizado")
         await loadOrders(false, pagination.currentPage) // Recargar pedidos
+        // Update selected order in modal if it's the one being viewed
+        setSelectedOrder((prev) => (prev && prev._id === orderId ? { ...prev, status: newStatus as Order["status"]} : prev))
       } else {
         Alert.alert("Error", response.message || "No se pudo actualizar el estado")
       }
     } catch (error) {
       console.error("❌ Error updating order status:", error)
       Alert.alert("Error", "Error de conexión al actualizar el estado")
+    } finally {
+      setLoadingUpdate(false)
     }
   }
 
@@ -153,9 +161,9 @@ export default function OrdersReportScreen() {
       Alert.alert("Error", "No tienes autorización para cancelar pedidos")
       return
     }
-
+    setLoadingUpdate(true)
     Alert.alert("Confirmar Cancelación", "¿Estás seguro de que quieres cancelar este pedido?", [
-      { text: "No", style: "cancel" },
+      { text: "No", style: "cancel", onPress: () => setLoadingUpdate(false) },
       {
         text: "Sí, Cancelar",
         style: "destructive",
@@ -166,12 +174,15 @@ export default function OrdersReportScreen() {
             if (response.success) {
               Alert.alert("Éxito", "Pedido cancelado correctamente")
               await loadOrders(false, pagination.currentPage)
+              setSelectedOrder((prev) => (prev && prev._id === orderId ? { ...prev, status: "cancelado" } : prev))
             } else {
               Alert.alert("Error", response.message || "No se pudo cancelar el pedido")
             }
           } catch (error) {
             console.error("❌ Error cancelling order:", error)
             Alert.alert("Error", "Error de conexión al cancelar el pedido")
+          } finally {
+            setLoadingUpdate(false)
           }
         },
       },
@@ -191,6 +202,16 @@ export default function OrdersReportScreen() {
     } catch (error) {
       return dateString
     }
+  }
+
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order)
+    setIsDetailsModalVisible(true)
+  }
+
+  const handleCloseDetailsModal = () => {
+    setIsDetailsModalVisible(false)
+    setSelectedOrder(null)
   }
 
   if (!state.isAuthenticated) {
@@ -277,7 +298,7 @@ export default function OrdersReportScreen() {
             </View>
 
             <View style={styles.customerInfo}>
-              <Text style={styles.customerName}>{order.userId?.nombreUsr || "Cliente"}</Text>
+              <Text style={styles.customerName}>{order.userId?.nombreUsr || "Cliente"}{order.userId?.apellidoUsr || ""}</Text>
               {order.userId?.emailUsr && <Text style={styles.customerPhone}>{order.userId.emailUsr}</Text>}
               {order.userId?.celUsr && <Text style={styles.customerPhone}>{order.userId.celUsr}</Text>}
               <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
@@ -355,6 +376,10 @@ export default function OrdersReportScreen() {
                   )}
                 </View>
               )}
+              <TouchableOpacity style={styles.viewMoreButton} onPress={() => handleViewDetails(order)}>
+                <Text style={styles.viewMoreButtonText}>Ver más</Text>
+                <Ionicons name="chevron-forward" size={16} color="#795548" />
+              </TouchableOpacity>
             </View>
           </View>
         ))}
@@ -378,6 +403,16 @@ export default function OrdersReportScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {/* Order Details Modal */}
+      <OrderDetailsModal
+        visible={isDetailsModalVisible}
+        order={selectedOrder}
+        onClose={handleCloseDetailsModal}
+        onUpdateStatus={updateOrderStatus}
+        onCancelOrder={cancelOrder}
+        loadingUpdate={loadingUpdate}
+      />
     </View>
   )
 }
@@ -629,5 +664,20 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  viewMoreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  viewMoreButtonText: {
+    color: "#795548",
+    fontSize: 12,
+    fontWeight: "bold",
+    marginRight: 4,
   },
 })

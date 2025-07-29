@@ -44,8 +44,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "b7f590d5-68f6-4b3f-84f0-9a1fd26bcd10"
+        "projectId": "83e7afce-41a2-4c82-9086-86beb9e5e7c9"
       }
-    }
+    },
+    "owner": "skr3"
   }
 }

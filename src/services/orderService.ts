@@ -12,6 +12,7 @@ export interface Order {
   userId: {
     _id: string
     nombreUsr: string
+    apellidoUsr: string,
     emailUsr: string
     celUsr?: string
   }
