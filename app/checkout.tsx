@@ -3,7 +3,8 @@
 import { Ionicons } from "@expo/vector-icons"
 import { router, useLocalSearchParams } from "expo-router"
 import React, { useState } from "react"
-import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native"
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { MapAddressSelector } from "../src/components/MapAddressSelector"
 import { Colors } from "../src/constants/Colors"
 import { useAuth } from "../src/context/AuthContext"
 import { orderService } from "../src/services/orderService"
@@ -18,15 +19,29 @@ export default function CheckoutScreen() {
 
   const [deliveryAddress, setDeliveryAddress] = useState({
     address: "",
+    coordinates: {
+      latitude: 0,
+      longitude: 0,
+    },
     additionalInfo: "",
   })
 
-  const [paymentMethod] = useState("whatsapp") // Agregar esta línea
+  const [paymentMethod] = useState("whatsapp")
   const [orderPlaced, setOrderPlaced] = useState(false)
+  const [mapVisible, setMapVisible] = useState(false)
+
+  const handleAddressSelect = (addressData: {
+    address: string
+    coordinates: { latitude: number; longitude: number }
+    additionalInfo: string
+  }) => {
+    console.log("📍 Dirección seleccionada:", addressData)
+    setDeliveryAddress(addressData)
+  }
 
   const handlePlaceOrder = async () => {
     if (!deliveryAddress.address.trim()) {
-      Alert.alert("Error", "Por favor, completa la dirección de entrega.")
+      Alert.alert("Error", "Por favor, selecciona una dirección de entrega.")
       return
     }
 
@@ -39,7 +54,13 @@ export default function CheckoutScreen() {
       return
     }
 
-    Alert.alert("Confirmar Pedido", "¿Estás seguro de que quieres realizar este pedido?", [
+    // Mostrar información de la dirección antes de confirmar
+    const hasCoordinates = deliveryAddress.coordinates.latitude !== 0 && deliveryAddress.coordinates.longitude !== 0
+    const confirmMessage = hasCoordinates
+      ? `¿Estás seguro de que quieres realizar este pedido?\n\n📍 Dirección: ${deliveryAddress.address}\n🗺️ Se incluirá enlace al mapa para facilitar la entrega.`
+      : `¿Estás seguro de que quieres realizar este pedido?\n\n📍 Dirección: ${deliveryAddress.address}`
+
+    Alert.alert("Confirmar Pedido", confirmMessage, [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Confirmar",
@@ -68,15 +89,21 @@ export default function CheckoutScreen() {
             if (orderResponse.success) {
               console.log("✅ Order created successfully in database")
 
-              // 2. Preparar datos del pedido para WhatsApp
+              // 2. Preparar datos del pedido para WhatsApp (incluyendo coordenadas)
               const orderData = {
                 cartItems: cartData,
                 total: totalAmount,
-                deliveryAddress,
+                deliveryAddress: {
+                  address: deliveryAddress.address,
+                  additionalInfo: deliveryAddress.additionalInfo,
+                  coordinates: deliveryAddress.coordinates, // Incluir coordenadas para el enlace del mapa
+                },
                 paymentMethod,
                 user: state.user,
-                orderId: orderResponse.data?.pedidos?.[0]?._id || "N/A", // Incluir ID del pedido creado
+                orderId: orderResponse.data?.pedidos?.[0]?._id || "N/A",
               }
+
+              console.log("📍 Sending order with coordinates:", orderData.deliveryAddress.coordinates)
 
               // 3. Enviar pedido por WhatsApp
               const sentToWhatsApp = await whatsappService.sendOrderToWhatsApp(orderData)
@@ -85,7 +112,7 @@ export default function CheckoutScreen() {
                 setTimeout(() => {
                   Alert.alert(
                     "Pedido Creado y Enviado",
-                    "Tu pedido ha sido registrado en la base de datos y enviado por WhatsApp. Recibirás confirmación del comercio pronto.",
+                    "Tu pedido ha sido registrado en la base de datos y enviado por WhatsApp con la ubicación exacta. Recibirás confirmación del comercio pronto.",
                     [
                       {
                         text: "OK",
@@ -154,7 +181,7 @@ export default function CheckoutScreen() {
           <Ionicons name="logo-whatsapp" size={80} color="#25D366" />
           <Text style={styles.successTitle}>¡Enviando Pedido!</Text>
           <Text style={styles.successText}>
-            Tu pedido se está enviando por WhatsApp. Te redirigiremos a la aplicación.
+            Tu pedido se está enviando por WhatsApp con la ubicación exacta. Te redirigiremos a la aplicación.
           </Text>
         </View>
       </View>
@@ -207,25 +234,44 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {/* Dirección de entrega */}
+        {/* Dirección de entrega con mapa */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Dirección de Entrega</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Dirección completa de entrega"
-            value={deliveryAddress.address}
-            onChangeText={(text) => setDeliveryAddress({ ...deliveryAddress, address: text })}
-            multiline
-            numberOfLines={2}
-          />
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Información adicional (opcional)"
-            value={deliveryAddress.additionalInfo}
-            onChangeText={(text) => setDeliveryAddress({ ...deliveryAddress, additionalInfo: text })}
-            multiline
-            numberOfLines={3}
-          />
+
+          {deliveryAddress.address ? (
+            <View style={styles.selectedAddressContainer}>
+              <View style={styles.addressHeader}>
+                <Ionicons name="location" size={20} color={Colors.light.primary} />
+                <Text style={styles.selectedAddressTitle}>Dirección seleccionada:</Text>
+              </View>
+              <Text style={styles.selectedAddressText}>{deliveryAddress.address}</Text>
+
+              {/* Mostrar coordenadas si están disponibles */}
+              {deliveryAddress.coordinates.latitude !== 0 && deliveryAddress.coordinates.longitude !== 0 && (
+                <View style={styles.coordinatesContainer}>
+                  <Ionicons name="navigate" size={16} color={Colors.light.success} />
+                  <Text style={styles.coordinatesText}>
+                    Ubicación GPS: {deliveryAddress.coordinates.latitude.toFixed(6)},{" "}
+                    {deliveryAddress.coordinates.longitude.toFixed(6)}
+                  </Text>
+                </View>
+              )}
+
+              {deliveryAddress.additionalInfo && (
+                <Text style={styles.additionalInfoText}>Información adicional: {deliveryAddress.additionalInfo}</Text>
+              )}
+
+              <TouchableOpacity style={styles.changeAddressButton} onPress={() => setMapVisible(true)}>
+                <Ionicons name="pencil" size={16} color={Colors.light.primary} />
+                <Text style={styles.changeAddressText}>Cambiar dirección</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.selectAddressButton} onPress={() => setMapVisible(true)}>
+              <Ionicons name="map" size={24} color="#fff" />
+              <Text style={styles.selectAddressText}>Seleccionar en el mapa</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
@@ -234,6 +280,15 @@ export default function CheckoutScreen() {
           <Text style={styles.placeOrderText}>Realizar Pedido - Bs{totalAmount.toFixed(2)}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Map Address Selector Modal */}
+      <MapAddressSelector
+        visible={mapVisible}
+        onClose={() => setMapVisible(false)}
+        onAddressSelect={handleAddressSelect}
+        initialAddress={deliveryAddress.address}
+        initialAdditionalInfo={deliveryAddress.additionalInfo}
+      />
     </View>
   )
 }
@@ -321,21 +376,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: Colors.light.primary,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: Colors.light.surface,
-    marginBottom: 12,
-    color: Colors.light.text,
-    textAlignVertical: "top",
-  },
-  textArea: {
-    height: 80,
-  },
   footer: {
     padding: 16,
     backgroundColor: Colors.light.background,
@@ -393,5 +433,75 @@ const styles = StyleSheet.create({
   userPhone: {
     fontSize: 16,
     color: Colors.light.icon,
+  },
+  selectAddressButton: {
+    backgroundColor: Colors.light.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  selectAddressText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
+  selectedAddressContainer: {
+    backgroundColor: Colors.light.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  addressHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  selectedAddressTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: Colors.light.text,
+    marginLeft: 8,
+  },
+  selectedAddressText: {
+    fontSize: 16,
+    color: Colors.light.text,
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  coordinatesContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    backgroundColor: "#E8F5E8",
+    padding: 8,
+    borderRadius: 6,
+  },
+  coordinatesText: {
+    fontSize: 12,
+    color: Colors.light.success,
+    marginLeft: 6,
+    fontFamily: "monospace",
+  },
+  additionalInfoText: {
+    fontSize: 14,
+    color: Colors.light.icon,
+    fontStyle: "italic",
+    marginBottom: 12,
+  },
+  changeAddressButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+  },
+  changeAddressText: {
+    color: Colors.light.primary,
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 4,
   },
 })

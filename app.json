@@ -19,7 +19,11 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.nathdcg07.MiPrimeraApp",
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,7 +40,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true

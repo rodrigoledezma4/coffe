@@ -10,6 +10,10 @@ interface OrderData {
   deliveryAddress: {
     address: string
     additionalInfo: string
+    coordinates?: {
+      latitude: number
+      longitude: number
+    }
   }
   paymentMethod: string
   user?: User | null
@@ -20,7 +24,7 @@ export const whatsappService = {
   formatOrderMessage(orderData: OrderData): string {
     const { cartItems, total, deliveryAddress, paymentMethod, user, orderId } = orderData
 
-    let message = "🛒 *NUEVO PEDIDO -AMBER INFUSIÓN*\n\n"
+    let message = "🛒 *NUEVO PEDIDO - AMBER INFUSIÓN*\n\n"
 
     // Add order ID if available
     if (orderId) {
@@ -42,7 +46,7 @@ export const whatsappService = {
       message += "\n"
     }
 
-    // Continue with the rest of the existing message format...
+    // Productos
     message += "📋 *PRODUCTOS:*\n"
     cartItems.forEach((item, index) => {
       message += `${index + 1}. ${item.name}\n`
@@ -55,11 +59,24 @@ export const whatsappService = {
     // Total
     message += `💰 *TOTAL: Bs${total.toFixed(2)}*\n\n`
 
-    // Dirección de entrega
+    // Dirección de entrega con enlace al mapa
     message += "📍 *DIRECCIÓN DE ENTREGA:*\n"
     message += `${deliveryAddress.address}\n`
+
     if (deliveryAddress.additionalInfo.trim()) {
       message += `Información adicional: ${deliveryAddress.additionalInfo}\n`
+    }
+
+    // Agregar enlace de Google Maps si hay coordenadas
+    if (
+      deliveryAddress.coordinates &&
+      deliveryAddress.coordinates.latitude !== 0 &&
+      deliveryAddress.coordinates.longitude !== 0
+    ) {
+      const { latitude, longitude } = deliveryAddress.coordinates
+      const googleMapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`
+      message += `\n🗺️ *UBICACIÓN EN EL MAPA:*\n${googleMapsUrl}\n`
+      message += `📌 *Coordenadas:* ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n`
     }
     message += "\n"
 
@@ -72,6 +89,10 @@ export const whatsappService = {
     // Información adicional
     message += "⏰ *Fecha del pedido:* " + new Date().toLocaleString("es-ES")
     message += "\n\n"
+    message += "🚚 *INSTRUCCIONES PARA ENTREGA:*\n"
+    message += "• Toca el enlace del mapa para ver la ubicación exacta\n"
+    message += "• Las coordenadas te llevarán al punto exacto de entrega\n"
+    message += "• Contacta al cliente si necesitas más referencias\n\n"
     message += "✅ *Por favor confirma la recepción de este pedido*"
 
     return message
@@ -79,33 +100,52 @@ export const whatsappService = {
 
   async sendOrderToWhatsApp(orderData: OrderData): Promise<boolean> {
     try {
-      console.log("Iniciando envío a WhatsApp...")
+      console.log("📱 Iniciando envío a WhatsApp...")
+      console.log("📍 Coordenadas de entrega:", orderData.deliveryAddress.coordinates)
+
       const message = this.formatOrderMessage(orderData)
       const encodedMessage = encodeURIComponent(message)
       const whatsappUrl = `whatsapp://send?phone=${WHATSAPP_NUMBER}&text=${encodedMessage}`
 
-      console.log("URL de WhatsApp:", whatsappUrl)
+      console.log("🔗 URL de WhatsApp generada")
+      console.log("📝 Mensaje incluye:", {
+        hasCoordinates: !!(
+          orderData.deliveryAddress.coordinates?.latitude && orderData.deliveryAddress.coordinates?.longitude
+        ),
+        address: orderData.deliveryAddress.address,
+        coordinates: orderData.deliveryAddress.coordinates,
+      })
 
       // Verificar si WhatsApp está disponible
       const canOpen = await Linking.canOpenURL(whatsappUrl)
-      console.log("¿Puede abrir WhatsApp?:", canOpen)
+      console.log("📱 ¿Puede abrir WhatsApp?:", canOpen)
 
       if (canOpen) {
-        console.log("Abriendo WhatsApp...")
+        console.log("✅ Abriendo WhatsApp...")
         await Linking.openURL(whatsappUrl)
         return true
       } else {
         // Si WhatsApp no está disponible, intentar con WhatsApp Web
-        console.log("WhatsApp no disponible, intentando con WhatsApp Web...")
+        console.log("🌐 WhatsApp no disponible, intentando con WhatsApp Web...")
         const webUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`
-        console.log("URL de WhatsApp Web:", webUrl)
+        console.log("🔗 URL de WhatsApp Web generada")
         await Linking.openURL(webUrl)
         return true
       }
     } catch (error) {
-      console.error("Error al enviar mensaje de WhatsApp:", error)
+      console.error("❌ Error al enviar mensaje de WhatsApp:", error)
       return false
     }
+  },
+
+  // Función auxiliar para generar enlace de Google Maps
+  generateGoogleMapsLink(latitude: number, longitude: number): string {
+    return `https://www.google.com/maps?q=${latitude},${longitude}`
+  },
+
+  // Función auxiliar para generar enlace de Waze (alternativa)
+  generateWazeLink(latitude: number, longitude: number): string {
+    return `https://waze.com/ul?ll=${latitude},${longitude}&navigate=yes`
   },
 
   validatePhoneNumber(phoneNumber: string): boolean {
