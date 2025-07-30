@@ -144,7 +144,9 @@ export default function OrdersReportScreen() {
         Alert.alert("Éxito", "Estado del pedido actualizado")
         await loadOrders(false, pagination.currentPage) // Recargar pedidos
         // Update selected order in modal if it's the one being viewed
-        setSelectedOrder((prev) => (prev && prev._id === orderId ? { ...prev, status: newStatus as Order["status"]} : prev))
+        setSelectedOrder((prev) =>
+          prev && prev._id === orderId ? { ...prev, status: newStatus as Order["status"] } : prev,
+        )
       } else {
         Alert.alert("Error", response.message || "No se pudo actualizar el estado")
       }
@@ -298,10 +300,22 @@ export default function OrdersReportScreen() {
             </View>
 
             <View style={styles.customerInfo}>
-              <Text style={styles.customerName}>{order.userId?.nombreUsr || "Cliente"}{order.userId?.apellidoUsr || ""}</Text>
+              <Text style={styles.customerName}>
+                {order.userId?.nombreUsr || "Cliente"}
+                {order.userId?.apellidoUsr || ""}
+              </Text>
               {order.userId?.emailUsr && <Text style={styles.customerPhone}>{order.userId.emailUsr}</Text>}
               {order.userId?.celUsr && <Text style={styles.customerPhone}>{order.userId.celUsr}</Text>}
               <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
+            </View>
+
+            {/* Dirección de entrega */}
+            <View style={styles.deliveryInfo}>
+              <Text style={styles.deliveryTitle}>Dirección de entrega:</Text>
+              <Text style={styles.deliveryAddress}>{order.direccionEntrega}</Text>
+              {order.infoAdicional && (
+                <Text style={styles.deliveryAdditional}>Info adicional: {order.infoAdicional}</Text>
+              )}
             </View>
 
             <View style={styles.orderItems}>
@@ -679,5 +693,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
     marginRight: 4,
+  },
+  deliveryInfo: {
+    marginBottom: 12,
+    backgroundColor: "#f0f8ff",
+    padding: 8,
+    borderRadius: 6,
+  },
+  deliveryTitle: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 4,
+  },
+  deliveryAddress: {
+    fontSize: 12,
+    color: "#555",
+    marginBottom: 2,
+  },
+  deliveryAdditional: {
+    fontSize: 11,
+    color: "#666",
+    fontStyle: "italic",
   },
 })

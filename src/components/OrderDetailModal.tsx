@@ -7,6 +7,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -169,6 +170,30 @@ export function OrderDetailsModal({
                   <View style={styles.infoItem}>
                     <Ionicons name="call-outline" size={20} color="#666" />
                     <Text style={styles.infoText}>{order.userId.celUsr}</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Dirección de Entrega</Text>
+                <View style={styles.infoItem}>
+                  <Ionicons name="location-outline" size={20} color="#666" />
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (order.direccionEntrega) {
+                        Linking.openURL(order.direccionEntrega)
+                      }
+                    }}
+                  >
+                    <Text style={[styles.infoText, { color: Colors.light.primary, textDecorationLine: "underline" }]}>
+                      Ver ubicación en Maps
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {order.infoAdicional && (
+                  <View style={styles.infoItem}>
+                    <Ionicons name="information-circle-outline" size={20} color="#666" />
+                    <Text style={styles.infoText}>Info adicional: {order.infoAdicional}</Text>
                   </View>
                 )}
               </View>

@@ -5,6 +5,8 @@ export interface CreateOrderRequest {
     productoId: string
     cantidad: number
   }[]
+  direccionEntrega: string
+  infoAdicional: string
 }
 
 export interface Order {
@@ -12,7 +14,7 @@ export interface Order {
   userId: {
     _id: string
     nombreUsr: string
-    apellidoUsr: string,
+    apellidoUsr: string
     emailUsr: string
     celUsr?: string
   }
@@ -28,6 +30,8 @@ export interface Order {
   }[]
   total: number
   status: "pendiente" | "confirmado" | "preparando" | "listo" | "entregado" | "cancelado"
+  direccionEntrega: string
+  infoAdicional: string
   createdAt: string
 }
 

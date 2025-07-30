@@ -22,14 +22,9 @@ interface OrderData {
 
 export const whatsappService = {
   formatOrderMessage(orderData: OrderData): string {
-    const { cartItems, total, deliveryAddress, paymentMethod, user, orderId } = orderData
+    const { cartItems, total, deliveryAddress, paymentMethod, user } = orderData
 
     let message = "🛒 *NUEVO PEDIDO - AMBER INFUSIÓN*\n\n"
-
-    // Add order ID if available
-    if (orderId) {
-      message += `📋 *ID DEL PEDIDO:* ${orderId}\n\n`
-    }
 
     // Información del cliente
     if (user) {

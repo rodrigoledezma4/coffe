@@ -77,6 +77,8 @@ export default function CheckoutScreen() {
                 productoId: item.id,
                 cantidad: item.quantity,
               })),
+              direccionEntrega: `https://www.google.com/maps?q=${deliveryAddress.coordinates.latitude},${deliveryAddress.coordinates.longitude}`,
+              infoAdicional: deliveryAddress.additionalInfo || "",
             }
 
             console.log("📤 Order request data:", JSON.stringify(orderRequest, null, 2))
